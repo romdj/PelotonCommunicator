@@ -1,4 +1,6 @@
 {
-  "name": "app",
-  "displayName": "app"
+  "name": "pelotoncommunicator",
+  "owner": "romdj",
+  "displayName": "pelotoncommunicator",
+  "slug": "pelotoncommunicator"
 }
