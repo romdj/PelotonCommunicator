@@ -1,112 +1,98 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
+/* import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+
+const MyButton = React.forwardRef((props, ref) => (
+  <View {...props} ref={ref} style={{ marginTop: 50 }}>
+    <Text>{props.label}</Text>
+  </View>
+));
+
+export default App = () => (
+  <TouchableOpacity>
+    <MyButton label="Press me!" />
+  </TouchableOpacity>
+);
  */
 
 import React from 'react';
-import type {Node} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import { StyleSheet, Button, View, SafeAreaView, Text, Alert } from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+const Separator = () => (
+  <View style={styles.separator} />
+);
 
-const Section = ({children, title}): Node => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
+const App = () => (
+  <SafeAreaView style={styles.container}>
+    <View>
+      <Text style={styles.title}>
+        The title and onPress handler are required. It is recommended to set accessibilityLabel to help make your app usable by everyone.
       </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
+      <Button
+        title="Press me"
+        onPress={() => Alert.alert('Simple Button pressed')}
+      />
     </View>
-  );
-};
-
-const App: () => Node = () => {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.js</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
+    <Separator />
+    <View>
+      <Text style={styles.title}>
+        Adjust the color in a way that looks standard on each platform. On  iOS, the color prop controls the color of the text. On Android, the color adjusts the background color of the button.
+      </Text>
+      <Button
+        title="Press me"
+        color="#f194ff"
+        onPress={() => Alert.alert('Button with adjusted color pressed')}
+      />
+    </View>
+    <Separator />
+    <View>
+      <Text style={styles.title}>
+        All interaction for the component are disabled.
+      </Text>
+      <Button
+        title="Press me"
+        disabled
+        onPress={() => Alert.alert('Cannot press this one')}
+      />
+    </View>
+    <Separator />
+    <View>
+      <Text style={styles.title}>
+        This layout strategy lets the title define the width of the button.
+      </Text>
+      <View style={styles.fixToText}>
+        <Button
+          title="Left button"
+          onPress={() => Alert.alert('Left button pressed')}
+        />
+        <Button
+          title="Right button"
+          onPress={() => Alert.alert('Right button pressed')}
+        />
+      </View>
+    </View>
+  </SafeAreaView>
+);
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    marginHorizontal: 16,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  title: {
+    textAlign: 'center',
+    marginVertical: 8,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  fixToText: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  highlight: {
-    fontWeight: '700',
+  separator: {
+    marginVertical: 8,
+    borderBottomColor: '#737373',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });
 
 export default App;
+
