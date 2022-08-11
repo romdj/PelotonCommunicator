@@ -20,13 +20,14 @@ import (
 	//
 	//    sw "github.com/myname/myrepo/go"
 	//
-	// sw "github.com/romdj/PelotonCommunicator/server/go"
+	// sw "github.com/romdj/PelotonCommunicator/server/generated/go"
+	// go install "github.com/romdj/PelotonCommunicator/server/generated/go@latest"
 )
 
 func main() {
 	log.Printf("Server started")
 
-	router := sw.NewRouter()
+	// router := sw.NewRouter()
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
