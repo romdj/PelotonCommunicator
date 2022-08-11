@@ -13,6 +13,7 @@ package main
 import (
 	"log"
 	"net/http"
+
 	// WARNING!
 	// Change this to a fully-qualified import path
 	// once you place this file into your project.
@@ -20,7 +21,7 @@ import (
 	//
 	//    sw "github.com/myname/myrepo/go"
 	//
-	// sw "github.com/romdj/PelotonCommunicator/server/go"
+	sw "./go"
 )
 
 func main() {
