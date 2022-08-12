@@ -1,28 +1,27 @@
 name: peloton-communicator
 
-on:
-  push:
-    branches:
-      - main
-      - dev
-      - staging
-      - testing
-      - feature/**
-    paths:
-    # Directories/Locations for which a new build is required when a change is detected
-      - app/**
-      - backend/**
-      - server/**
-      - .github/**
-  pull_request:
-    branches: 
-      - main
-      - dev
-      - staging
-      - testing
-      - feature/**
-      - server*
-      - app*
+on: push
+  #   branches:
+  #     - main
+  #     - dev
+  #     - staging
+  #     - testing
+  #     - feature/**
+  #   paths:
+  #   # Directories/Locations for which a new build is required when a change is detected
+  #     - app/**
+  #     - backend/**
+  #     - server/**
+  #     - .github/**
+  # pull_request:
+  #   branches: 
+  #     - main
+  #     - dev
+  #     - staging
+  #     - testing
+  #     - feature/**
+  #     - server*
+  #     - app*
 
 jobs:
   app:
