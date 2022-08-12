@@ -139,25 +139,39 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   DefaultTextStyle(
                     style: textTheme.headline4!,
-                    child: RawKeyboardListener(
-                      focusNode: _focusNode,
-                      onKey: _handleKeyEvent,
-                      child: AnimatedBuilder(
-                        animation: _focusNode,
-                        builder: (BuildContext context, Widget? child) {
-                          if (!_focusNode.hasFocus) {
-                            return GestureDetector(
-                              onTap: () {
-                                FocusScope.of(context).requestFocus(_focusNode);
-                              },
-                              child: const Text('Tap to focus'),
-                            );
-                          }
-                          return Text(_message ?? 'Press a key');
-                        },
-                      ),
+                    child: AnimatedBuilder(
+                      animation: _focusNode,
+                      builder: (BuildContext context, Widget? child) {
+                        if (!_focusNode.hasFocus) {
+                          return GestureDetector(
+                            onTap: () {
+                              FocusScope.of(context).requestFocus(_focusNode);
+                            },
+                            child: const Text('Tap to focus'),
+                          );
+                        }
+                        return Text(_message ?? 'Press a key');
+                      },
                     ),
                   ),
+                  // child: RawKeyboardListener(
+                  //   focusNode: _focusNode,
+                  //   onKey: _handleKeyEvent,
+                  //   child: AnimatedBuilder(
+                  //     animation: _focusNode,
+                  //     builder: (BuildContext context, Widget? child) {
+                  //       if (!_focusNode.hasFocus) {
+                  //         return GestureDetector(
+                  //           onTap: () {
+                  //             FocusScope.of(context).requestFocus(_focusNode);
+                  //           },
+                  //           child: const Text('Tap to focus'),
+                  //         );
+                  //       }
+                  //       return Text(_message ?? 'Press a key');
+                  //     },
+                  //   ),
+                  // ),
                 ],
               )),
         ),
