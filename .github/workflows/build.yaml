@@ -1,4 +1,4 @@
-name: peloton-communicator
+name: peloton-communicator CI
 
 on: push
   #   branches:
