@@ -1,4 +1,4 @@
-name: peloton-communicator-deployment 
+name: peloton-communicator CD 
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
       - dev
       - staging
+      - CI_CD
     paths:
     # Directories/Locations for which a new build is required when a change is detected
       - app/**
