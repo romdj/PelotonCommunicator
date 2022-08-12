@@ -2,7 +2,12 @@ name: peloton-communicator
 
 on:
   push:
-    branches: [main, dev, staging, testing, feature/**]
+    branches:
+      - main
+      - dev
+      - staging
+      - testing
+      - feature/**
     paths:
     # Directories/Locations for which a new build is required when a change is detected
       - app/**
@@ -10,7 +15,14 @@ on:
       - server/**
       - .github/**
   pull_request:
-    branches: [main, dev, staging, testing, feature/**, server*, app*]
+    branches: 
+      - main
+      - dev
+      - staging
+      - testing
+      - feature/**
+      - server*
+      - app*
 
 jobs:
   app:
