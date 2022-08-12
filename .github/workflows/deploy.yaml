@@ -1,4 +1,4 @@
-name: peloton-communicator deployment 
+name: peloton-communicator-deployment 
 
 on:
   push:
