@@ -1,7 +1,7 @@
 module github.com/romdj/PelotonCommunicator/server
 
 replace golang.org/x/sys => golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab
-go 1.18
+go 1.19
 
 require github.com/gin-gonic/gin v1.7.2
 

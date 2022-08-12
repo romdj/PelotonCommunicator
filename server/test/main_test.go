@@ -1,6 +1,8 @@
 package main
 
-import "testing"
+import (
+	"testing"
+)
 
 func testEcho(t *testing.T) {
 	// if testing.Short() {
