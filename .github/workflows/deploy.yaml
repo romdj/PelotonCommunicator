@@ -7,17 +7,16 @@ on:
       - dev
       - staging
       - CI_CD
-    paths:
-    # Directories/Locations for which a new build is required when a change is detected
-      - app/**
-      - backend/**
-      - server/**
-      - .github/**
-  pull_request:
-    branches: 
-      - main
-      - dev
-      - staging
+    # paths:
+    # # Directories/Locations for which a new build is required when a change is detected
+    #   - app/**
+    #   - backend/**
+    #   - server/**
+    #   - .github/**
+    #   - staging
+    
+    # TODO
+    # Trigger the deployment scripts only for the sub-component that is affected
 
 jobs:
   app:
