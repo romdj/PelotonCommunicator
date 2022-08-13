@@ -16,6 +16,9 @@ on:
     #   - staging
     
     # TODO
+    # Chain/Allow Deployment scripts only when build succeeds
+
+    # TODO
     # Trigger the deployment scripts only for the sub-component that is affected
 
 jobs:

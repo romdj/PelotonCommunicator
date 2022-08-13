@@ -7,7 +7,11 @@ on:
       - dev
       - staging
       - testing
+      - CI_CD
       - feature/**
+      - server*
+      - app*
+      
     paths:
     # Directories/Locations for which a new build is required when a change is detected
       - app/**
@@ -20,9 +24,6 @@ on:
       - dev
       - staging
       - testing
-      - feature/**
-      - server*
-      - app*
 
 jobs:
   app:
