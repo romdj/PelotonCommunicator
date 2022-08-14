@@ -1,3 +1,5 @@
+import 'package:app/classes/my_audio_handler.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,12 @@ import 'package:flutter/services.dart';
 void main() {
   runApp(const MyApp());
 }
+
+String staticText = "unaffected";
+
+// MaterialColor themeColor = MaterialColor(0x);
+// var a = Color.fromARGB(255, 0, 96, 100);
+// var c = Colors.cyan.shade900;
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -24,12 +32,14 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.deepOrange,
+        primarySwatch: Colors.cyan,
       ),
       home: const MyHomePage(title: 'Peloton Communicator - List of Groups'),
     );
   }
 }
+
+MyAudioHandler audioHandler = MyAudioHandler();
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key, required this.title}) : super(key: key);
@@ -141,11 +151,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   DefaultTextStyle(
                     style: textTheme.headline4!,
-                    child: Text('Microphone status: ${recording}'),
+                    child: Text('Microphone status: $recording'),
                   ),
                   DefaultTextStyle(
                     style: textTheme.headline4!,
-                    child: Text('Speaker status: ${playing}'),
+                    child: Text('Speaker status: $playing'),
+                  ),
+                  DefaultTextStyle(
+                    style: textTheme.headline4!,
+                    child: Text('Audio handler status: $staticText'),
                   ),
                   DefaultTextStyle(
                     style: textTheme.headline4!,
