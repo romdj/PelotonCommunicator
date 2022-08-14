@@ -137,7 +137,7 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Column(
                 children: [
                   const Image(
-                    image: AssetImage("assets/images/hektor.jpg"),
+                    image: AssetImage("assets/images/hektor_me.jpg"),
                   ),
                   DefaultTextStyle(
                     style: textTheme.headline4!,
