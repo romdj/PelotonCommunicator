@@ -1,5 +1,4 @@
 import 'package:app/classes/my_audio_handler.dart';
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
