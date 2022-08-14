@@ -54,6 +54,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool speaking = false;
   bool keyPressed = false;
+  bool playing = false;
+  bool recording = false;
 
   String? _message;
 
@@ -69,6 +71,13 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       if (event.logicalKey == LogicalKeyboardKey.keyQ) {
         _message = 'Pressed the "Q" key!';
+      } else if (event.logicalKey == LogicalKeyboardKey.mediaPlayPause ||
+          event.logicalKey == LogicalKeyboardKey.mediaPlay) {
+        _message = 'Pressed the "media" key!';
+      } else if (event.logicalKey ==
+          LogicalKeyboardKey
+              .audioVolumeUp /*|| event.logicalKey == LogicalKeyboardKey.volum */) {
+        _message = 'Pressed the "volume up" key!';
       } else {
         _message =
             'Event: ${event.logicalKey.keyId.toRadixString(16)} || ${event.logicalKey.debugName}';
@@ -86,17 +95,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   final FocusNode _focusNode = FocusNode();
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,12 +121,16 @@ class _MyHomePageState extends State<MyHomePage> {
                 // print("speaking");
                 setState(() {
                   speaking = true;
+                  playing = false;
+                  recording = true;
                   print(_defineText());
                 });
               },
               onLongPressUp: () {
                 setState(() {
                   speaking = false;
+                  playing = true;
+                  recording = false;
                   print(_defineText());
                 });
               },
@@ -139,51 +141,60 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   DefaultTextStyle(
                     style: textTheme.headline4!,
-                    child: AnimatedBuilder(
-                      animation: _focusNode,
-                      builder: (BuildContext context, Widget? child) {
-                        if (!_focusNode.hasFocus) {
-                          return GestureDetector(
-                            onTap: () {
-                              FocusScope.of(context).requestFocus(_focusNode);
-                            },
-                            child: const Text('Tap to focus'),
-                          );
-                        }
-                        return Text(_message ?? 'Press a key');
-                      },
+                    child: Text('Microphone status: ${recording}'),
+                  ),
+                  DefaultTextStyle(
+                    style: textTheme.headline4!,
+                    child: Text('Speaker status: ${playing}'),
+                  ),
+                  DefaultTextStyle(
+                    style: textTheme.headline4!,
+                    //   child: AnimatedBuilder(
+                    //     animation: _focusNode,
+                    //     builder: (BuildContext context, Widget? child) {
+                    //       if (!_focusNode.hasFocus) {
+                    //         return GestureDetector(
+                    //           onTap: () {
+                    //             FocusScope.of(context).requestFocus(_focusNode);
+                    //           },
+                    //           child: const Text('Tap to focus'),
+                    //         );
+                    //       }
+                    //       return Text(_message ?? 'Press a key');
+                    //     },
+                    //   ),
+                    // ),
+                    child: RawKeyboardListener(
+                      focusNode: _focusNode,
+                      onKey: _handleKeyEvent,
+                      child: AnimatedBuilder(
+                        animation: _focusNode,
+                        builder: (BuildContext context, Widget? child) {
+                          if (!_focusNode.hasFocus) {
+                            return GestureDetector(
+                              onTap: () {
+                                FocusScope.of(context).requestFocus(_focusNode);
+                              },
+                              child: const Text('Tap to focus'),
+                            );
+                          }
+                          return Text(_message ?? 'Press a key');
+                        },
+                      ),
                     ),
                   ),
-                  // child: RawKeyboardListener(
-                  //   focusNode: _focusNode,
-                  //   onKey: _handleKeyEvent,
-                  //   child: AnimatedBuilder(
-                  //     animation: _focusNode,
-                  //     builder: (BuildContext context, Widget? child) {
-                  //       if (!_focusNode.hasFocus) {
-                  //         return GestureDetector(
-                  //           onTap: () {
-                  //             FocusScope.of(context).requestFocus(_focusNode);
-                  //           },
-                  //           child: const Text('Tap to focus'),
-                  //         );
-                  //       }
-                  //       return Text(_message ?? 'Press a key');
-                  //     },
-                  //   ),
-                  // ),
                 ],
               )),
         ),
       ),
 
-      floatingActionButton: FloatingActionButton(
-        // foregroundColor: Colors.lime,
-        splashColor: Colors.lime,
-        onPressed: _incrementCounter,
-        tooltip: 'Speak',
-        child: const Icon(Icons.mic, color: Colors.amber),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      //   floatingActionButton: FloatingActionButton(
+      //     // foregroundColor: Colors.lime,
+      //     splashColor: Colors.lime,
+      //     onPressed: _incrementCounter,
+      //     tooltip: 'Speak',
+      //     child: const Icon(Icons.mic, color: Colors.amber),
+      //   ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
