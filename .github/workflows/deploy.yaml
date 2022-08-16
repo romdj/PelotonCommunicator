@@ -1,0 +1,51 @@
+name: peloton-communicator CD 
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - staging
+      - CI_CD
+    # paths:
+    # # Directories/Locations for which a new build is required when a change is detected
+    #   - app/**
+    #   - backend/**
+    #   - server/**
+    #   - .github/**
+    #   - staging
+    
+    # TODO
+    # Chain/Allow Deployment scripts only when build succeeds
+
+    # TODO
+    # Trigger the deployment scripts only for the sub-component that is affected
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Flutter action
+      uses: subosito/flutter-action@v2.6.1
+    - uses: actions/checkout@v3
+      with:
+        flutter-version: '3.0.5'
+        channel: 'stable'
+    - run: flutter --version
+      working-directory: ./app
+    - run: echo "executing deployment script for Flutter app"
+      working-directory: ./app
+
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+    - run: go version 
+    - run: go test 
+      working-directory: ./server/test
+    - run: echo "executing deployment script for Server application"
+      working-directory: ./server

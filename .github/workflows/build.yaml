@@ -1,0 +1,68 @@
+name: peloton-communicator CI
+
+on: 
+  push:
+    branches:
+      - main
+      - dev
+      - staging
+      - testing
+      - CI_CD
+      - feature/**
+      - server*
+      - app*
+      
+    paths:
+    # Directories/Locations for which a new build is required when a change is detected
+      - app/**
+      - backend/**
+      - server/**
+      - .github/**
+  pull_request:
+    branches: 
+      - main
+      - dev
+      - staging
+      - testing
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Flutter action
+      uses: subosito/flutter-action@v2.6.1
+    - uses: actions/checkout@v3
+      with:
+        flutter-version: '3.0.5'
+        channel: 'stable'
+    - run: flutter --version
+      working-directory: ./app
+    - run: flutter test
+      working-directory: ./app
+
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: '^1.19'
+    - run: go version 
+    - run: go test 
+      working-directory: ./server/test
+
+  # generate:
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 10
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         ref: ${{ github.head_ref }}
+  #     - uses: actions/setup-node@v3
+  #       with:
+  #         node-version: 16
+  #         cache: yarn
+  #     - run: yarn
+  #     - run: yarn format
+  #     - uses: int128/update-generated-files-action@v2
