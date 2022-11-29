@@ -1,8 +1,19 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.app">
-    <!-- The INTERNET permission is required for development. Specifically,
-         the Flutter tool needs it to communicate with the running application
-         to allow setting breakpoints, to provide hot reload, etc.
-    -->
-    <uses-permission android:name="android.permission.INTERNET"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.app">
+	<!--
+	The INTERNET permission is required for development. Specifically,
+	the Flutter tool needs it to communicate with the running application
+	to allow setting breakpoints, to provide hot reload, etc.
+	-->
+	<uses-permission android:name="android.permission.INTERNET" />
+	<receiver android:name="androidx.media.session.MediaButtonReceiver">
+		<intent-filter>
+			<action android:name="android.intent.action.MEDIA_BUTTON" />
+		</intent-filter>
+	</receiver>
+    <service android:name="com.example.android.MediaPlaybackService" >
+        <intent-filter>
+          <action android:name="android.intent.action.MEDIA_BUTTON" />
+        </intent-filter>
+      </service>
+      
 </manifest>
