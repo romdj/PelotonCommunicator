@@ -12,9 +12,6 @@ on:
       - 'packages/mobile/**'
       - '.github/workflows/mobile-ci.yml'
 
-env:
-  # Flutter version will be determined from pubspec.yaml
-
 jobs:
   # ====================================
   # Code Quality and Testing
