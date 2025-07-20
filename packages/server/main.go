@@ -32,5 +32,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
 
-	router.Run("localhost:8080")
+	if err := router.Run("localhost:8080"); err != nil {
+		panic("Failed to start server: " + err.Error())
+	}
 }

@@ -29,7 +29,7 @@ class HomeScreen extends StatelessWidget {
                             : Colors.red,
                         border: Border.all(color: Colors.white, width: 4),
                       ),
-                      child: Icon(Icons.mic, size: 100, color: Colors.white),
+                      child: const Icon(Icons.mic, size: 100, color: Colors.white),
                     ),
 
                     const SizedBox(height: 40),

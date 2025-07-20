@@ -68,8 +68,5 @@ class PTTService extends ChangeNotifier {
     _setState(PTTState.idle);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+  // No need to override dispose if we're not doing anything beyond super.dispose()
 }
