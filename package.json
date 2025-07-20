@@ -6,7 +6,7 @@
   "scripts": {
     "setup": "npm run setup:tools && npm run setup:mobile && npm run setup:server",
     "setup:tools": "npm install",
-    "setup:mobile": "cd packages/mobile && flutter pub get",
+    "setup:mobile": "cd packages/mobile && flutter config --no-analytics && flutter pub get",
     "setup:server": "cd packages/server && go mod download",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:mobile\"",
     "dev:mobile": "cd packages/mobile && flutter run",

@@ -126,12 +126,9 @@ packages/server/vendor/
 packages/server/docs/swagger/
 
 # ================================
-# Archive (old projects) - Keep but ignore builds
+# Archive (old projects) - Completely ignore
 # ================================
-archive/*/build/
-archive/*/.dart_tool/
-archive/*/node_modules/
-archive/*/coverage/
+archive/
 
 # ================================
 # Documentation
