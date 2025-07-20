@@ -15,7 +15,6 @@ import (
 )
 
 type Order struct {
-
 	Id int64 `json:"id,omitempty"`
 
 	ClubId int64 `json:"clubId,omitempty"`
