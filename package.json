@@ -1,0 +1,114 @@
+{
+  "name": "peloton-communicator-monorepo",
+  "version": "1.0.0",
+  "description": "Peloton Communicator - Cross-platform push-to-talk communication system",
+  "private": true,
+  "scripts": {
+    "setup": "npm run setup:tools && npm run setup:mobile && npm run setup:server",
+    "setup:tools": "npm install",
+    "setup:mobile": "cd packages/mobile && flutter config --no-analytics && flutter pub get",
+    "setup:server": "cd packages/server && go mod download",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:mobile\"",
+    "dev:mobile": "cd packages/mobile && flutter run",
+    "dev:server": "cd packages/server && air || go run main.go",
+    "test": "npm run test:mobile && npm run test:server",
+    "test:mobile": "cd packages/mobile && flutter test",
+    "test:server": "cd packages/server && go test ./...",
+    "test:coverage": "npm run test:mobile:coverage && npm run test:server:coverage",
+    "test:mobile:coverage": "cd packages/mobile && flutter test --coverage",
+    "test:server:coverage": "cd packages/server && go test -cover ./...",
+    "lint": "npm run lint:mobile && npm run lint:server",
+    "lint:mobile": "cd packages/mobile && dart analyze && dart format --set-exit-if-changed .",
+    "lint:server": "cd packages/server && golangci-lint run",
+    "format": "npm run format:mobile && npm run format:server",
+    "format:mobile": "cd packages/mobile && dart format .",
+    "format:server": "cd packages/server && gofmt -w .",
+    "build": "npm run build:mobile && npm run build:server",
+    "build:mobile": "cd packages/mobile && flutter build apk --release && flutter build ios --release --no-codesign",
+    "build:server": "cd packages/server && go build -o bin/server .",
+    "build:docker": "npm run build:docker:server",
+    "build:docker:server": "cd packages/server && docker build -t peloton-communicator-server .",
+    "clean": "npm run clean:mobile && npm run clean:server && npm run clean:root",
+    "clean:mobile": "cd packages/mobile && flutter clean",
+    "clean:server": "cd packages/server && go clean -cache -modcache -testcache",
+    "clean:root": "rm -rf node_modules dist .nyc_output coverage",
+    "docs": "npm run docs:generate && npm run docs:serve",
+    "docs:generate": "npm run docs:api && npm run docs:mobile",
+    "docs:api": "cd packages/server && swag init -g main.go --output docs/swagger || echo 'Swagger generation skipped'",
+    "docs:mobile": "cd packages/mobile && dart doc || echo 'Dart doc generation skipped'",
+    "docs:serve": "npx http-server docs -p 8080 -o",
+    "security": "npm run security:mobile && npm run security:server",
+    "security:mobile": "cd packages/mobile && flutter pub deps --json | jq '.packages[] | select(.source == \"hosted\")' | grep -E 'version|name'",
+    "security:server": "cd packages/server && govulncheck ./... || echo 'Install govulncheck: go install golang.org/x/vuln/cmd/govulncheck@latest'",
+    "deps:check": "npm run deps:check:mobile && npm run deps:check:server",
+    "deps:check:mobile": "cd packages/mobile && flutter pub outdated",
+    "deps:check:server": "cd packages/server && go list -u -m all",
+    "deps:update": "npm run deps:update:mobile && npm run deps:update:server",
+    "deps:update:mobile": "cd packages/mobile && flutter pub upgrade",
+    "deps:update:server": "cd packages/server && go get -u ./... && go mod tidy",
+    "release:check": "semantic-release --dry-run",
+    "release": "semantic-release",
+    "precommit": "npm run lint && npm run test",
+    "prepare": "husky install",
+    "postinstall": "npm run setup:mobile && npm run setup:server"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.0.0",
+    "@commitlint/config-conventional": "^18.0.0",
+    "@mermaid-js/mermaid-cli": "^10.0.0",
+    "@semantic-release/changelog": "^6.0.0",
+    "@semantic-release/git": "^10.0.0",
+    "@semantic-release/github": "^9.0.0",
+    "concurrently": "^8.0.0",
+    "http-server": "^14.0.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^15.0.0",
+    "markdown-toc": "^1.2.0",
+    "semantic-release": "^22.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romdj/peloton-communicator.git"
+  },
+  "keywords": [
+    "flutter",
+    "go",
+    "webrtc",
+    "push-to-talk",
+    "bluetooth",
+    "mobile",
+    "communication",
+    "monorepo"
+  ],
+  "author": "Peloton Communicator Team",
+  "license": "MIT",
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  },
+  "lint-staged": {
+    "packages/mobile/**/*.dart": [
+      "dart format",
+      "dart analyze"
+    ],
+    "packages/server/**/*.go": [
+      "gofmt -w",
+      "golangci-lint run"
+    ],
+    "*.{md,json,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  }
+}

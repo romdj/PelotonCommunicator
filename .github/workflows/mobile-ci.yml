@@ -1,0 +1,369 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'packages/mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'packages/mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+
+jobs:
+  # ====================================
+  # Code Quality and Testing
+  # ====================================
+  analyze:
+    name: Analyze and Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Flutter version from pubspec.yaml
+        id: flutter-version
+        run: |
+          # Extract minimum Flutter version from pubspec.yaml
+          FLUTTER_VERSION=$(grep -oP '(?<=flutter: ").*(?=")' pubspec.yaml | sed 's/>=//g')
+          echo "Using Flutter version: $FLUTTER_VERSION"
+          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter-version.outputs.version }}
+          cache: true
+
+      - name: Disable Flutter analytics
+        run: flutter config --no-analytics
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze project source
+        run: flutter analyze --fatal-infos
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        if: github.ref == 'refs/heads/main'
+        uses: codecov/codecov-action@v3
+        with:
+          file: packages/mobile/coverage/lcov.info
+          flags: mobile
+          name: mobile-coverage
+
+  # ====================================
+  # Android Build
+  # ====================================
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    needs: analyze
+    defaults:
+      run:
+        working-directory: packages/mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Flutter version from pubspec.yaml
+        id: flutter-version
+        working-directory: packages/mobile
+        run: |
+          # Extract minimum Flutter version from pubspec.yaml
+          FLUTTER_VERSION=$(grep -oP '(?<=flutter: ").*(?=")' pubspec.yaml | sed 's/>=//g')
+          echo "Using Flutter version: $FLUTTER_VERSION"
+          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter-version.outputs.version }}
+          cache: true
+
+      - name: Disable Flutter analytics
+        run: flutter config --no-analytics
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # - name: Build APK (Debug)
+      #   run: flutter build apk --debug
+
+      # - name: Build APK (Release)
+      #   if : github.ref == 'refs/heads/main'
+      #   run: flutter build apk --release
+
+      # - name: Build App Bundle (Release)
+      #   if : github.ref == 'refs/heads/main'
+      #   run: flutter build appbundle --release
+
+      # - name: Upload Android artifacts
+      #   if : github.ref == 'refs/heads/main'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: android-releases
+      #     path: |
+      #       packages/mobile/build/app/outputs/flutter-apk/app-release.apk
+      #       packages/mobile/build/app/outputs/bundle/release/app-release.aab
+
+  # ====================================
+  # iOS Build (macOS runner required)
+  # ====================================
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    needs: analyze
+    defaults:
+      run:
+        working-directory: packages/mobile
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Flutter version from pubspec.yaml
+        id: flutter-version
+        working-directory: packages/mobile
+        run: |
+          # Extract minimum Flutter version from pubspec.yaml
+          FLUTTER_VERSION=$(grep -oP '(?<=flutter: ").*(?=")' pubspec.yaml | sed 's/>=//g')
+          echo "Using Flutter version: $FLUTTER_VERSION"
+          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.flutter-version.outputs.version }}
+          cache: true
+
+      - name: Disable Flutter analytics
+        run: flutter config --no-analytics
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build iOS (Debug)
+        run: flutter build ios --debug --no-codesign
+
+      - name: Build iOS (Release)
+        if: github.ref == 'refs/heads/main'
+        run: flutter build ios --release --no-codesign
+
+      - name: Upload iOS artifacts
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: packages/mobile/build/ios/iphoneos/Runner.app
+
+  # ====================================
+  # Integration Tests
+  # ====================================
+
+  # integration-test:
+  #   name: Integration Tests
+  #   runs-on: ubuntu-latest
+  #   needs: analyze
+  #   defaults:
+  #     run:
+  #       working-directory: packages/mobile
+
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Extract Flutter version from pubspec.yaml
+  #       id: flutter-version
+  #       working-directory: packages/mobile
+  #       run: |
+  #         # Extract minimum Flutter version from pubspec.yaml
+  #         FLUTTER_VERSION=$(grep -oP '(?<=flutter: ").*(?=")' pubspec.yaml | sed 's/>=//g')
+  #         echo "Using Flutter version: $FLUTTER_VERSION"
+  #         echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: ${{ steps.flutter-version.outputs.version }}
+  #         cache: true
+
+  #     - name: Disable Flutter analytics
+  #       run: flutter config --no-analytics
+
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         distribution: 'zulu'
+  #         java-version: '17'
+
+  #     - name: Setup Android SDK
+  #       uses: android-actions/setup-android@v3
+
+  #     - name: Install dependencies
+  #       run: flutter pub get
+
+  #     - name: Enable KVM (for Android Emulator)
+  #       run: |
+  #         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+  #         sudo udevadm control --reload-rules
+  #         sudo udevadm trigger --name-match=kvm
+
+  #     - name: Start Android Emulator
+  #       uses: reactivecircus/android-emulator-runner@v2
+  #       with:
+  #         api-level: 31
+  #         target: google_apis
+  #         arch: x86_64
+  #         profile: Nexus 6
+  #         script: |
+  #           cd packages/mobile
+  #           flutter drive --target=test_driver/app.dart
+
+  
+  # ====================================
+  # Security and Dependency Checks
+  # # ====================================
+  # security:
+  #   name: Security Scan
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       working-directory: packages/mobile
+
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Extract Flutter version from pubspec.yaml
+  #       id: flutter-version
+  #       working-directory: packages/mobile
+  #       run: |
+  #         # Extract minimum Flutter version from pubspec.yaml
+  #         FLUTTER_VERSION=$(grep -oP '(?<=flutter: ").*(?=")' pubspec.yaml | sed 's/>=//g')
+  #         echo "Using Flutter version: $FLUTTER_VERSION"
+  #         echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: ${{ steps.flutter-version.outputs.version }}
+  #         cache: true
+
+  #     - name: Disable Flutter analytics
+  #       run: flutter config --no-analytics
+
+  #     - name: Install dependencies
+  #       run: flutter pub get
+
+  #     - name: Check for security vulnerabilities
+  #       run: |
+  #         # Check for known vulnerabilities in dependencies
+  #         flutter pub deps --json | jq '.packages[] | select(.kind == "direct")' > dependencies.json
+  #         # Add vulnerability scanning logic here
+
+  #     - name: Dependency license check
+  #       run: |
+  #         # Check licenses of dependencies
+  #         flutter pub deps --style=compact | grep -E "(license|License)" || true
+
+  # ====================================
+  # Performance Testing
+  # ====================================
+  # performance:
+  #   name: Performance Tests
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main'
+  #   needs: [build-android]
+  #   defaults:
+  #     run:
+  #       working-directory: packages/mobile
+
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Extract Flutter version from pubspec.yaml
+  #       id: flutter-version
+  #       working-directory: packages/mobile
+  #       run: |
+  #         # Extract minimum Flutter version from pubspec.yaml
+  #         FLUTTER_VERSION=$(grep -oP '(?<=flutter: ").*(?=")' pubspec.yaml | sed 's/>=//g')
+  #         echo "Using Flutter version: $FLUTTER_VERSION"
+  #         echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: ${{ steps.flutter-version.outputs.version }}
+  #         cache: true
+
+  #     - name: Disable Flutter analytics
+  #       run: flutter config --no-analytics
+
+  #     - name: Install dependencies
+  #       run: flutter pub get
+
+  #     - name: Build profile APK
+  #       run: flutter build apk --profile
+
+  #     - name: Performance analysis
+  #       run: |
+  #         # Analyze APK size
+  #         APK_SIZE=$(stat -c%s "build/app/outputs/flutter-apk/app-profile.apk")
+  #         echo "APK Size: $((APK_SIZE / 1024 / 1024))MB"
+          
+  #         # Check if APK size is reasonable (under 50MB)
+  #         if [ $APK_SIZE -gt 52428800 ]; then
+  #           echo "⚠️ APK size is larger than 50MB"
+  #           exit 1
+  #         fi
+
+  # ====================================
+  # Notification on Success/Failure
+  # ====================================
+  # notify:
+  #   name: Notify Results
+  #   runs-on: ubuntu-latest
+  #   needs: [analyze, build-android, build-ios, integration-test, security]
+  #   if: always() && github.ref == 'refs/heads/main'
+
+  #   steps:
+  #     - name: Notify on success
+  #       if: ${{ needs.analyze.result == 'success' && needs.build-android.result == 'success' && needs.build-ios.result == 'success' }}
+  #       run: |
+  #         echo "✅ Mobile CI/CD pipeline completed successfully!"
+  #         # Add Slack/Discord notification here if needed
+
+  #     - name: Notify on failure
+  #       if: ${{ needs.analyze.result == 'failure' || needs.build-android.result == 'failure' || needs.build-ios.result == 'failure' }}
+  #       run: |
+  #         echo "❌ Mobile CI/CD pipeline failed!"
+  #         # Add Slack/Discord notification here if needed

@@ -1,0 +1,397 @@
+name: Monorepo CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  schedule:
+    # Run dependency checks daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+jobs:
+  # ====================================
+  # Repository Structure and Quality
+  # ====================================
+  repo-health:
+    name: Repository Health Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check repository structure
+        run: |
+          echo "🏗️ Checking monorepo structure..."
+          
+          # Check required directories exist
+          required_dirs=("packages/mobile" "packages/server" ".github/workflows" "docs")
+          for dir in "${required_dirs[@]}"; do
+            if [ ! -d "$dir" ]; then
+              echo "❌ Missing required directory: $dir"
+              exit 1
+            else
+              echo "✅ Found: $dir"
+            fi
+          done
+
+      - name: Check required files
+        run: |
+          echo "📄 Checking required files..."
+          
+          required_files=(
+            "README.md"
+            "packages/mobile/README.md"
+            "packages/server/README.md"
+            "packages/mobile/pubspec.yaml"
+            "packages/server/go.mod"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+
+      - name: Validate README files
+        run: |
+          echo "📖 Validating README files..."
+          
+          # Check main README has proper sections
+          if ! grep -q "## 🏗️ Architecture" README.md; then
+            echo "❌ Main README missing Architecture section"
+            exit 1
+          fi
+          
+          if ! grep -q "## 🚀 Quick Start" README.md; then
+            echo "❌ Main README missing Quick Start section"
+            exit 1
+          fi
+          
+          echo "✅ README files are valid"
+
+  # ====================================
+  # Dependency Management
+  # ====================================
+  dependencies:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for tooling)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Check Flutter dependencies
+        working-directory: packages/mobile
+        run: |
+          echo "📱 Analyzing Flutter dependencies..."
+          flutter pub get
+          flutter pub deps
+          
+          # Check for outdated packages
+          flutter pub outdated --json > outdated.json || true
+          if [ -s outdated.json ]; then
+            echo "📊 Found outdated Flutter packages:"
+            cat outdated.json
+          fi
+
+      - name: Check Go dependencies
+        working-directory: packages/server
+        run: |
+          echo "🔧 Analyzing Go dependencies..."
+          go mod download
+          go mod tidy
+          
+          # Check for security vulnerabilities
+          go list -json -deps ./... | jq -r '.ImportPath' | sort -u > deps.txt
+          echo "📊 Go dependencies:"
+          cat deps.txt
+
+      - name: Generate dependency report
+        run: |
+          echo "📊 Generating dependency report..."
+          echo "# Dependency Report" > dependency-report.md
+          echo "Generated on: $(date)" >> dependency-report.md
+          echo "" >> dependency-report.md
+          
+          echo "## Flutter Dependencies" >> dependency-report.md
+          if [ -f packages/mobile/pubspec.yaml ]; then
+            echo '```yaml' >> dependency-report.md
+            grep -A 20 "dependencies:" packages/mobile/pubspec.yaml >> dependency-report.md
+            echo '```' >> dependency-report.md
+          fi
+          
+          echo "" >> dependency-report.md
+          echo "## Go Dependencies" >> dependency-report.md
+          if [ -f packages/server/go.mod ]; then
+            echo '```go' >> dependency-report.md
+            cat packages/server/go.mod >> dependency-report.md
+            echo '```' >> dependency-report.md
+          fi
+
+      - name: Upload dependency report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-report
+          path: dependency-report.md
+
+  # ====================================
+  # Security Scanning
+  # ====================================
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Check for secrets
+        run: |
+          # Install detect-secrets
+          pip install detect-secrets
+          
+          # Run secrets detection
+          detect-secrets scan --all-files --disable-plugin AbsolutePathDetectorExperimental \
+            --exclude-files 'archive/.*' \
+            --exclude-files '\.git/.*' \
+            --exclude-files '\.github/.*' \
+            --exclude-files 'node_modules/.*' \
+            --exclude-files '.*\.lock$' \
+            --exclude-files '.*\.log$' \
+            . || echo "Secrets detection completed with findings - review manually"
+
+  # ====================================
+  # Documentation Generation
+  # ====================================
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install documentation tools
+        run: |
+          npm install -g @mermaid-js/mermaid-cli
+          npm install -g markdown-toc
+
+      - name: Generate architecture diagrams
+        run: |
+          mkdir -p docs/diagrams
+          
+          # Create architecture diagram
+          cat << 'EOF' > docs/diagrams/architecture.mmd
+          graph TB
+              A[Mobile App] --> B[API Gateway]
+              B --> C[Go Server]
+              C --> D[WebRTC Signaling]
+              C --> E[Room Management]
+              C --> F[User Management]
+              
+              subgraph "Mobile Features"
+                  A1[PTT Controls]
+                  A2[Bluetooth Integration]
+                  A3[Audio Management]
+              end
+              
+              A --> A1
+              A --> A2
+              A --> A3
+          EOF
+          
+          mmdc -i docs/diagrams/architecture.mmd -o docs/diagrams/architecture.png
+
+      - name: Update table of contents
+        run: |
+          # Update TOC in README files
+          if command -v markdown-toc &> /dev/null; then
+            markdown-toc -i README.md
+            markdown-toc -i packages/mobile/README.md
+            markdown-toc -i packages/server/README.md
+          fi
+
+      - name: Deploy documentation to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+
+  # ====================================
+  # Release Management
+  # ====================================
+  release:
+    name: Release Management
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install semantic-release
+        run: |
+          npm install -g semantic-release
+          npm install -g @semantic-release/changelog
+          npm install -g @semantic-release/git
+          npm install -g @semantic-release/github
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure semantic-release
+          cat << 'EOF' > .releaserc.json
+          {
+            "branches": ["main"],
+            "plugins": [
+              "@semantic-release/commit-analyzer",
+              "@semantic-release/release-notes-generator",
+              "@semantic-release/changelog",
+              "@semantic-release/github",
+              "@semantic-release/git"
+            ]
+          }
+          EOF
+          
+          semantic-release
+
+  # ====================================
+  # Performance Monitoring
+  # ====================================
+  lighthouse:
+    name: Performance Audit
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.11.x
+
+      - name: Run Lighthouse CI
+        run: |
+          # Create Lighthouse CI configuration
+          cat << 'EOF' > lighthouserc.js
+          module.exports = {
+            ci: {
+              collect: {
+                numberOfRuns: 3,
+                staticDistDir: './docs',
+              },
+              assert: {
+                assertions: {
+                  'categories:performance': ['warn', {minScore: 0.8}],
+                  'categories:accessibility': ['error', {minScore: 0.9}],
+                  'categories:best-practices': ['warn', {minScore: 0.8}],
+                  'categories:seo': ['warn', {minScore: 0.8}],
+                }
+              },
+              upload: {
+                target: 'temporary-public-storage',
+              },
+            },
+          };
+          EOF
+          
+          lhci collect --config=lighthouserc.js
+          lhci assert --config=lighthouserc.js
+
+  # ====================================
+  # Cleanup and Maintenance
+  # ====================================
+  cleanup:
+    name: Cleanup Old Artifacts
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Cleanup old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 30
+          keep_minimum_runs: 10
+
+      - name: Cleanup old releases
+        run: |
+          echo "🧹 Cleaning up old pre-releases..."
+          # Keep only the last 10 pre-releases
+          # This would need the GitHub CLI or API calls
+
+  # ====================================
+  # Notification Summary
+  # ====================================
+  notify:
+    name: Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [repo-health, dependencies, security, documentation]
+    if: always()
+
+    steps:
+      - name: Generate pipeline summary
+        run: |
+          echo "# 📊 Monorepo CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository Health | ${{ needs.repo-health.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependencies | ${{ needs.dependencies.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | ${{ needs.documentation.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

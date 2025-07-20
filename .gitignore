@@ -1,0 +1,163 @@
+# ================================
+# Monorepo Root
+# ================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Build artifacts
+dist/
+build/
+reports/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ================================
+# Flutter Mobile App
+# ================================
+
+# Build artifacts
+packages/mobile/build/
+packages/mobile/.dart_tool/
+packages/mobile/.packages
+packages/mobile/.flutter-plugins
+packages/mobile/.flutter-plugins-dependencies
+
+# Android
+packages/mobile/android/app/debug
+packages/mobile/android/app/profile
+packages/mobile/android/app/release
+packages/mobile/android/.gradle
+packages/mobile/android/captures/
+packages/mobile/android/gradlew
+packages/mobile/android/gradlew.bat
+packages/mobile/android/local.properties
+packages/mobile/android/**/GeneratedPluginRegistrant.java
+packages/mobile/android/key.properties
+packages/mobile/android/app/google-services.json
+
+# iOS
+packages/mobile/ios/Flutter/Flutter.framework
+packages/mobile/ios/Flutter/Flutter.podspec
+packages/mobile/ios/Flutter/Generated.xcconfig
+packages/mobile/ios/Flutter/ephemeral/
+packages/mobile/ios/Flutter/app.flx
+packages/mobile/ios/Flutter/app.zip
+packages/mobile/ios/Flutter/flutter_assets/
+packages/mobile/ios/Flutter/flutter_export_environment.sh
+packages/mobile/ios/ServiceDefinitions.json
+packages/mobile/ios/Runner/GeneratedPluginRegistrant.*
+packages/mobile/ios/Pods/
+packages/mobile/ios/.symlinks/
+packages/mobile/ios/Flutter/flutter_export_environment.sh
+
+# Flutter/Dart specific
+packages/mobile/pubspec.lock
+packages/mobile/.dart_tool/
+packages/mobile/.packages
+packages/mobile/pubspec_overrides.yaml
+
+# ================================
+# Go Server
+# ================================
+
+# Binaries
+packages/server/bin/
+packages/server/*.exe
+packages/server/main
+packages/server/server
+
+# Test binary, built with `go test -c`
+packages/server/*.test
+
+# Output of the go coverage tool
+packages/server/*.out
+packages/server/*.prof
+
+# Go workspace file
+packages/server/go.work
+
+# Air (hot reload) temporary files
+packages/server/tmp/
+
+# Vendor directory
+packages/server/vendor/
+
+# Generated code
+packages/server/docs/swagger/
+
+# ================================
+# Archive (old projects) - Completely ignore
+# ================================
+archive/
+
+# ================================
+# Documentation
+# ================================
+
+# Generated documentation
+docs/generated/
+docs/api/
+docs/coverage/
+
+# ================================
+# Git and CI/CD
+# ================================
+
+# Git hooks
+.husky/_/
+
+# Secrets and sensitive files
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+
+# ================================
+# Temporary files
+# ================================
+
+*.tmp
+*.temp
+.cache/
