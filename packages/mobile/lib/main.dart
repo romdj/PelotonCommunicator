@@ -16,9 +16,7 @@ class MyApp extends StatelessWidget {
       create: (context) => PTTService(),
       child: MaterialApp(
         title: 'Peloton Communicator',
-        theme: ThemeData(
-          primarySwatch: Colors.deepOrange,
-        ),
+        theme: ThemeData(primarySwatch: Colors.deepOrange),
         home: const HomeScreen(),
       ),
     );

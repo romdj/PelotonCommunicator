@@ -91,7 +91,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install gosec
-        run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        run: go install github.com/securecodewarrior/gosec/cmd/gosec@latest
 
       - name: Run gosec security scanner
         run: gosec ./...
@@ -146,7 +146,7 @@ jobs:
           CGO_ENABLED=0 go build -a -installsuffix cgo -ldflags="-w -s" -o dist/${BINARY_NAME} .
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: server-${{ matrix.os }}-${{ matrix.arch }}
           path: packages/server/dist/
@@ -301,7 +301,7 @@ jobs:
 
       - name: Upload API documentation
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: api-documentation
           path: packages/server/docs/

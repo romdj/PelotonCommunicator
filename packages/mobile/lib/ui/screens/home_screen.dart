@@ -24,21 +24,16 @@ class HomeScreen extends StatelessWidget {
                       height: 200,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: pttService.state.isActive ? Colors.green : Colors.red,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 4,
-                        ),
+                        color: pttService.state.isActive
+                            ? Colors.green
+                            : Colors.red,
+                        border: Border.all(color: Colors.white, width: 4),
                       ),
-                      child: Icon(
-                        Icons.mic,
-                        size: 100,
-                        color: Colors.white,
-                      ),
+                      child: Icon(Icons.mic, size: 100, color: Colors.white),
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Status Text
                     Text(
                       pttService.state.isActive ? 'RECORDING' : 'READY',
@@ -48,9 +43,9 @@ class HomeScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     Text(
                       _getInstructionText(pttService),
                       style: const TextStyle(
@@ -59,9 +54,9 @@ class HomeScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // PTT Mode Switch
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -111,21 +106,23 @@ class HomeScreen extends StatelessWidget {
                                 value: pttService.mode.isHold,
                                 onChanged: (value) {
                                   pttService.setMode(
-                                    value ? PTTMode.hold : PTTMode.toggle
+                                    value ? PTTMode.hold : PTTMode.toggle,
                                   );
                                 },
                                 activeColor: Colors.orange,
                                 inactiveThumbColor: Colors.green,
-                                inactiveTrackColor: Colors.green.withOpacity(0.3),
+                                inactiveTrackColor: Colors.green.withOpacity(
+                                  0.3,
+                                ),
                               ),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 30),
-                    
+
                     // Manual test buttons (for debugging)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -160,11 +157,11 @@ class HomeScreen extends StatelessWidget {
 
   String _getInstructionText(PTTService pttService) {
     if (pttService.state.isActive) {
-      return pttService.mode.isToggle 
+      return pttService.mode.isToggle
           ? 'Press button again to stop recording'
           : 'Release button to stop recording';
     } else {
-      return pttService.mode.isToggle 
+      return pttService.mode.isToggle
           ? 'Press play/pause button to start recording'
           : 'Hold play/pause button to record';
     }
