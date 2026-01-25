@@ -61,14 +61,17 @@ go run main.go
 - 📋 **Documentation**: In progress
 
 ### Known Limitations
-- **iOS**: Media button capture restricted by Apple's security policies
-- **Long Press**: Triggers system voice assistants on both platforms
-- **Recommendation**: Focus on Android deployment for full functionality
+- **iOS**: Long-press triggers Siri (iOS system restriction - cannot be overridden)
+- **iOS Workaround**: Use toggle mode with single-press only
+- **Android**: Long-press voice assistant prevention implemented ✅
+- **Recommendation**: Full functionality on Android; iOS users should use toggle mode
 
 ## 📚 Documentation
 
 - [Mobile App Documentation](./packages/mobile/README.md)
 - [Backend API Documentation](./packages/server/README.md)
+- [Bluetooth PTT Implementation](./docs/bluetooth-ptt-implementation.md)
+- [Testing Guide](./TESTING.md)
 - [Architecture Overview](./docs/architecture.md)
 - [Development Guide](./docs/development.md)
 
