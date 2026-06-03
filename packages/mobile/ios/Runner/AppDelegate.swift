@@ -13,7 +13,8 @@ import AVFoundation
   private var lastPressTime = 0.0
   private let DOUBLE_PRESS_INTERVAL = 0.3 // 300ms to prevent accidental double press
   private var volumeButtonObserver: VolumeButtonObserver?
-  
+  private var systemPTTManager: Any? // PTTSystemManager (iOS 16+) — typed as Any so file compiles on older SDKs
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -53,6 +54,36 @@ import AVFoundation
           result(nil)
         } else {
           result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid arguments", details: nil))
+        }
+      case "joinPTTChannel":
+        if #available(iOS 16.0, *) {
+          let args = call.arguments as? [String: Any]
+          let name = args?["name"] as? String ?? "Peloton PTT"
+          let uuid = args?["uuid"] as? String
+          let manager = (self?.systemPTTManager as? PTTSystemManager)
+            ?? PTTSystemManager(channel: pttChannel)
+          self?.systemPTTManager = manager
+          manager.joinChannel(name: name, uuidString: uuid, result: result)
+        } else {
+          result(FlutterError(code: "UNSUPPORTED_OS", message: "PushToTalk requires iOS 16+", details: nil))
+        }
+      case "leavePTTChannel":
+        if #available(iOS 16.0, *), let manager = self?.systemPTTManager as? PTTSystemManager {
+          manager.leaveChannel(result: result)
+        } else {
+          result(nil)
+        }
+      case "beginSystemPTTTransmit":
+        if #available(iOS 16.0, *), let manager = self?.systemPTTManager as? PTTSystemManager {
+          manager.beginTransmitting(result: result)
+        } else {
+          result(FlutterError(code: "NO_MANAGER", message: "PTT manager not initialised", details: nil))
+        }
+      case "stopSystemPTTTransmit":
+        if #available(iOS 16.0, *), let manager = self?.systemPTTManager as? PTTSystemManager {
+          manager.stopTransmitting(result: result)
+        } else {
+          result(nil)
         }
       default:
         result(FlutterMethodNotImplemented)
@@ -256,6 +287,14 @@ import AVFoundation
     case "headsetPlayPause":
       // Already handled by MPRemoteCommandCenter
       print("Headset play/pause button configured")
+    case "systemPTT":
+      // Handled via PTChannelManager once Flutter calls joinPTTChannel.
+      // Disable MPRemoteCommandCenter targets so we don't double-fire on headset taps.
+      let cc = MPRemoteCommandCenter.shared()
+      cc.togglePlayPauseCommand.isEnabled = false
+      cc.playCommand.isEnabled = false
+      cc.pauseCommand.isEnabled = false
+      print("System PTT selected — accessory events will route through PushToTalk framework")
     default:
       print("Button type \(button) uses default configuration")
     }
