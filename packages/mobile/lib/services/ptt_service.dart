@@ -2,21 +2,41 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/ptt_state.dart';
+import 'recorder_service.dart';
 
 class PTTService extends ChangeNotifier {
   static const platform = MethodChannel('com.example.peloton/ptt');
 
   PTTState _state = PTTState.idle;
   PTTConfiguration _config = const PTTConfiguration();
+  final RecorderService _recorder;
 
   PTTState get state => _state;
   PTTMode get mode => _config.mode;
   PTTButton get button => _config.button;
   PTTConfiguration get config => _config;
 
-  PTTService() {
+  PTTService({RecorderService? recorder})
+      : _recorder = recorder ?? RecorderService() {
     _initializeNativeCommunication();
     _initializeWakeLock();
+    _pushInitialConfigToNative();
+  }
+
+  // The native side keeps its own copy of pttMode/pttButton with defaults that may not
+  // match the Dart defaults. Sync once at startup so the first headset press is handled
+  // with the correct configuration instead of native defaults.
+  void _pushInitialConfigToNative() async {
+    try {
+      await platform.invokeMethod('updatePTTConfiguration', {
+        'mode': _config.mode.name,
+        'button': _config.button.name,
+        'preventScreenLock': _config.preventScreenLock,
+      });
+      debugPrint('PTT initial config pushed to native: mode=${_config.mode.name}, button=${_config.button.name}');
+    } catch (e) {
+      debugPrint('Error pushing initial PTT config to native: $e');
+    }
   }
 
   void _initializeWakeLock() async {
@@ -53,6 +73,13 @@ class PTTService extends ChangeNotifier {
     if (_state != newState) {
       _state = newState;
       debugPrint('PTT State changed to: $_state (Mode: ${_config.mode.displayName}, Button: ${_config.button.displayName})');
+      // Drive recording lifecycle from state transitions so every press/release
+      // path (system PTT, headset, on-screen, manual) goes through one place.
+      if (newState == PTTState.active) {
+        _recorder.startRecording();
+      } else {
+        _recorder.stopAndPlayback();
+      }
       notifyListeners();
     }
   }
@@ -97,6 +124,19 @@ class PTTService extends ChangeNotifier {
         debugPrint('Error updating native configuration: $e');
       }
 
+      // Manage iOS PushToTalk channel lifecycle when systemPTT is selected/deselected.
+      try {
+        if (_config.button == PTTButton.systemPTT) {
+          await platform.invokeMethod('joinPTTChannel', {
+            'name': 'Peloton PTT',
+          });
+        } else {
+          await platform.invokeMethod('leavePTTChannel');
+        }
+      } catch (e) {
+        debugPrint('Error toggling system PTT channel: $e');
+      }
+
       notifyListeners();
     }
   }
@@ -106,13 +146,10 @@ class PTTService extends ChangeNotifier {
   }
 
   void setButton(PTTButton newButton) {
-    // Force toggle mode for play/pause button (MediaSession doesn't distinguish press/release well)
-    if (newButton == PTTButton.playPause && _config.mode == PTTMode.hold) {
-      debugPrint('Auto-switching to toggle mode for play/pause button');
-      updateConfiguration(_config.copyWith(button: newButton, mode: PTTMode.toggle));
-    } else {
-      updateConfiguration(_config.copyWith(button: newButton));
-    }
+    // Native code forces toggle semantics for play/pause keycodes regardless of mode,
+    // so the user can keep hold mode (for volume buttons) without breaking play/pause.
+    // The settings UI still hides hold mode when play/pause is selected for clarity.
+    updateConfiguration(_config.copyWith(button: newButton));
   }
 
   void setPreventScreenLock(bool prevent) {
@@ -128,5 +165,9 @@ class PTTService extends ChangeNotifier {
     _setState(PTTState.idle);
   }
 
-  // No need to override dispose if we're not doing anything beyond super.dispose()
+  @override
+  void dispose() {
+    _recorder.dispose();
+    super.dispose();
+  }
 }
