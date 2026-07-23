@@ -2,265 +2,175 @@
 
 ## Overview
 
-This document describes the implementation of Bluetooth headset button capture for Push-to-Talk (PTT) functionality in the Peloton Communicator app, including solutions for preventing voice assistant activation on long-press.
+This document describes how Bluetooth headset button capture works for Push-to-Talk
+(PTT) in Peloton Communicator, and what is and isn't achievable given Bluetooth AVRCP
+and platform media-button constraints. **This is no longer an open problem** — both
+platforms reliably capture headset button presses. See `ROADMAP.md` for the remaining
+work (headset volume buttons, WebRTC wiring).
 
-## The Challenge
+## Android Implementation
 
-**Problem**: Long-pressing the Bluetooth headset play/pause button triggers the system voice assistant:
-- **Android**: Google Assistant
-- **iOS**: Siri
+### Foreground MediaSessionService
 
-This interferes with the intended PTT functionality and creates a poor user experience.
+**File**: `packages/mobile/android/app/src/main/kotlin/com/example/app/PttMediaSessionService.kt`
 
-## Solution Implementation
-
-### Android Implementation
-
-We've implemented a multi-layered approach to intercept media button events before the system voice assistant:
-
-#### 1. Activity-Level Key Event Interception
-
-**File**: `packages/mobile/android/app/src/main/kotlin/com/example/app/MainActivity.kt`
+A dedicated `MediaSessionService` (AndroidX Media3) owns the PTT media session and runs
+as a foreground service, so it keeps receiving media button events even when the app is
+backgrounded or the screen is off — this was the missing piece in earlier attempts that
+only intercepted key events at the `Activity` level.
 
 ```kotlin
-override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-    // Intercept HEADSETHOOK and MEDIA_PLAY_PAUSE for PTT functionality
-    when (event.keyCode) {
-        KeyEvent.KEYCODE_HEADSETHOOK,
-        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
-        KeyEvent.KEYCODE_MEDIA_PLAY,
-        KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-            // Detect long press via repeatCount
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount > 0) {
-                // Consume the event to prevent voice assistant
-                return true
-            }
+class PttMediaSessionService : MediaSessionService() {
+    private var mediaSession: MediaSession? = null
 
-            handleKeyEventForPTT(event)
-            return true  // Consume to prevent further propagation
+    override fun onCreate() {
+        super.onCreate()
+        val player = PttPlayer()
+        mediaSession = MediaSession.Builder(this, player)
+            .setId("PelotonPTT")
+            .setCallback(PttSessionCallback())
+            .build()
+    }
+
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+
+    private class PttSessionCallback : MediaSession.Callback {
+        override fun onMediaButtonEvent(
+            session: MediaSession,
+            controllerInfo: MediaSession.ControllerInfo,
+            intent: Intent
+        ): Boolean {
+            val key = intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
+            return when (key.keyCode) {
+                KeyEvent.KEYCODE_HEADSETHOOK,
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_MEDIA_PLAY,
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                    PttEventBus.emit(key)
+                    true
+                }
+                else -> false
+            }
         }
     }
-    return super.dispatchKeyEvent(event)
 }
 ```
 
-**Key Points**:
-- `dispatchKeyEvent()` is called **before** system-level handlers
-- We detect long-press by checking `event.repeatCount > 0`
-- Consuming the event (`return true`) prevents voice assistant activation
-- Works for both single and long presses
+`PttEventBus` (a simple in-process listener) forwards the raw `KeyEvent` to
+`MainActivity`, which translates it into `pttPressed` / `pttReleased` MethodChannel
+calls consumed by `ptt_service.dart`. `PttPlayer.kt` is a minimal `Player` stub the
+`MediaSession` needs to exist and stay active.
 
-#### 2. MediaSessionCompat Setup
+`MainActivity.kt` starts this service (`startForegroundService`) once RECORD_AUDIO /
+BLUETOOTH_CONNECT / (Android 13+) POST_NOTIFICATIONS permissions are granted, and keeps
+`onKeyDown` / `onKeyUp` overrides for **volume buttons only** — those are activity-scoped
+and are not delivered through `MediaSession.Callback`.
 
-We maintain the MediaSession approach for broader compatibility:
+### Toggle vs. Hold mode
 
-```kotlin
-private fun setupMediaSession() {
-    mediaSession = MediaSessionCompat(this, "PelotonPTT")
-    mediaSession.setFlags(
-        MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
-        MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
-    )
-    // ... additional setup
-}
-```
+`handleKeyEventForPTT` in `MainActivity.kt` implements both modes with a 300ms
+double-press debounce. Critically, **`ptt_service.dart` force-switches the play/pause
+button to toggle mode** (`setButton()`), because hold mode is not reliable for that
+button — see "Known AVRCP Limitations" below.
 
-#### 3. Permissions
-
-**File**: `packages/mobile/android/app/src/main/AndroidManifest.xml`
+### Permissions
 
 ```xml
-<uses-permission android:name="android.permission.BLUETOOTH" />
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
-<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 ```
 
-### iOS Implementation
+## iOS Implementation
 
-**File**: `packages/mobile/ios/Runner/AppDelegate.swift`
+Two paths exist side by side, selected per the `button` setting in `PTTConfiguration`:
 
-#### Limitations on iOS
+### 1. `headsetPlayPause` / `headsetNext` / `headsetPrevious` — `MPRemoteCommandCenter`
 
-**Important**: iOS has strict system-level restrictions:
-- Apps **cannot** intercept long-press for Siri
-- Long-press is handled at the CoreAudio/Bluetooth stack level
-- `MPRemoteCommandCenter` only receives events that aren't consumed by system
-- There is **no API** to override Siri activation on long-press
+**File**: `packages/mobile/ios/Runner/AppDelegate.swift` (`setupRemoteCommandCenter`)
 
-#### What We Can Do
+Standard `MPRemoteCommandCenter` target registration. Works, but only while the app is
+in the foreground, and — like every third-party iOS app — cannot intercept a long-press,
+which the system routes to Siri before the app ever sees it. No API exists to change
+this; it's a system-level restriction, not a bug in this codebase.
+
+### 2. `systemPTT` — Apple's PushToTalk framework (iOS 16+, recommended)
+
+**File**: `packages/mobile/ios/Runner/PTTSystemManager.swift`
+
+Apple shipped the [PushToTalk framework](https://developer.apple.com/documentation/pushtotalk)
+in iOS 16 specifically to give third-party apps proper headset-button PTT, including
+**background** transmit. `ptt_service.dart` calls `joinPTTChannel` when this button is
+selected; `PTTSystemManager` then:
 
 ```swift
-private func setupRemoteCommandCenter(channel: FlutterMethodChannel) {
-    let commandCenter = MPRemoteCommandCenter.shared()
-
-    // Enable commands we want to handle
-    commandCenter.togglePlayPauseCommand.isEnabled = true
-    commandCenter.playCommand.isEnabled = true
-    commandCenter.pauseCommand.isEnabled = true
-
-    commandCenter.togglePlayPauseCommand.addTarget { [weak self] event in
-        self?.handlePTTButtonEvent(channel: channel)
-        return .success
-    }
+manager.requestJoinChannel(channelUUID: uuid, descriptor: descriptor) { error in
+    manager.setAccessoryButtonEventsEnabled(true, channelUUID: uuid) { err in ... }
 }
 ```
 
-**iOS Workaround**:
-- Use **toggle mode** with single-press only
-- Educate users to avoid long-press on iOS
-- Consider using double-press or other gestures
+`setAccessoryButtonEventsEnabled(true)` tells the system to map Bluetooth accessory
+media events onto the PTT channel's `didBeginTransmittingFrom` / `didEndTransmittingFrom`
+delegate callbacks, which `PTTSystemManager` forwards to Flutter as `pttPressed` /
+`pttReleased`. This is the officially supported mechanism — prefer it over
+`MPRemoteCommandCenter` wherever iOS 16+ can be assumed (requires the
+`com.apple.developer.push-to-talk` entitlement; see `Runner.entitlements`).
 
-## PTT Modes
+Known quirk (from Apple's own developer forums): some A2DP head units send a "play"
+event automatically on connect, which the framework will interpret as "begin
+transmitting." This is inherent to how the framework maps generic media events onto PTT
+semantics and isn't something the app can distinguish.
 
-### Toggle Mode (Recommended for iOS)
+## Known AVRCP / Media-Button Limitations
 
-```dart
-PTTMode.toggle
-```
+These apply regardless of platform code quality — they're characteristics of Bluetooth
+AVRCP and how OS media-button stacks work, confirmed against Android's own media3 issue
+tracker and Apple's PushToTalk documentation:
 
-**Behavior**:
-- **Single press**: Start recording
-- **Another single press**: Stop recording
-- **Long press**: Consumed on Android, triggers Siri on iOS
-
-**Best for**: iOS users, hands-free operation with simple gestures
-
-### Hold Mode (Best for Android)
-
-```dart
-PTTMode.hold
-```
-
-**Behavior**:
-- **Press and hold**: Recording while button is held
-- **Release**: Stop recording immediately
-- **Long press**: Prevented on Android, triggers Siri on iOS
-
-**Best for**: Android users, traditional walkie-talkie feel
+1. **Long-press disambiguation swallows the release event.** Headset firmware buffers
+   the button to tell single/double/long press apart, so the down+up pair is often only
+   emitted once, at physical release — not at physical press. This is why holding the
+   button appears to do nothing until you let go. **Mitigation**: use toggle mode for
+   play/pause (already the default/forced behavior).
+2. **Headset volume buttons don't emit `KeyEvent`s at all** once AVRCP absolute volume
+   is negotiated (Android 6+) — the headset talks directly to the audio HAL via
+   `SET_ABSOLUTE_VOLUME`. **Mitigation (planned, see `ROADMAP.md`)**: register a
+   `VolumeProvider` on the media session to receive discrete volume-change callbacks;
+   this supports toggle mode only, since AVRCP never delivers a true down/up pair for
+   volume keys.
+3. **True press-and-hold with a guaranteed down/up pair** requires bypassing AVRCP
+   media-button semantics entirely — a dedicated BLE PTT button (GATT characteristic
+   notifications, not AVRCP) as used by Zello/ESChat hardware accessories. Candidate for
+   a future "premium hardware" path; see `ROADMAP.md`.
 
 ## Testing
 
-### Android Testing
+**Physical devices required** — emulators do not support Bluetooth headset button
+delivery. See `TESTING.md` and the `PHASE*_TESTING.md` guides for detailed scripts.
 
-1. **Build and deploy** to physical Android device (emulators don't support Bluetooth headsets properly)
-   ```bash
-   cd packages/mobile
-   flutter run --release
-   ```
+```bash
+# Android
+adb logcat | grep PTT
 
-2. **Connect Bluetooth headset** to the device
-
-3. **Test scenarios**:
-   - Single press → Should toggle/activate PTT
-   - Long press (>500ms) → Should be consumed, NOT trigger Google Assistant
-   - Rapid presses → Should be debounced (300ms interval)
-
-4. **Check logs**:
-   ```bash
-   adb logcat | grep PTT
-   ```
-
-### iOS Testing
-
-1. **Build and deploy** to physical iOS device
-   ```bash
-   cd packages/mobile
-   flutter run --release
-   ```
-
-2. **Connect Bluetooth headset** to the device
-
-3. **Test scenarios**:
-   - Single press → Should toggle PTT
-   - Long press → Will trigger Siri (expected limitation)
-   - Use toggle mode exclusively
-
-4. **Check logs** in Xcode console
-
-## Known Limitations
-
-### Android
-- ✅ **Long-press voice assistant**: Prevented via `dispatchKeyEvent()`
-- ✅ **Single and double press**: Fully supported
-- ✅ **Both PTT modes**: Toggle and Hold work well
-- ⚠️ **Manufacturer differences**: Some OEMs may have custom Bluetooth stacks
-
-### iOS
-- ❌ **Long-press voice assistant**: Cannot be prevented (iOS restriction)
-- ✅ **Single press**: Works well in toggle mode
-- ⚠️ **Hold mode**: Not recommended due to Siri activation risk
-- ⚠️ **App must be foreground**: iOS restricts background media button handling
-
-## User Recommendations
-
-### For Android Users
-1. Use either **Toggle** or **Hold** mode based on preference
-2. Both modes work reliably
-3. Long-press is intercepted and won't trigger Google Assistant
-
-### For iOS Users
-1. Use **Toggle mode only**
-2. Use quick single presses (avoid holding the button)
-3. Be aware that long-press will trigger Siri
-4. Keep app in foreground during rides
-5. Consider using on-screen button as alternative
-
-## Alternative Solutions Considered
-
-### 1. Foreground Service (Android)
-**Status**: Not implemented yet
-- Could provide even higher priority for button capture
-- Useful for background operation
-- May be needed for production
-
-### 2. Accessibility Service (Android)
-**Status**: Rejected
-- Requires extensive permissions
-- Poor UX (users must enable in settings)
-- Overkill for this use case
-
-### 3. Custom Bluetooth Profile
-**Status**: Not feasible
-- Would require custom headset firmware
-- Not compatible with standard headsets
-
-### 4. Siri Shortcuts (iOS)
-**Status**: Under consideration
-- Could create "PTT" shortcut
-- Still requires long-press, just redirects to app
-- Doesn't solve the core problem
-
-## Future Improvements
-
-1. **Foreground Service** for Android background operation
-2. **Alternative gestures**: Double-press, triple-press patterns
-3. **Haptic feedback** on button press confirmation
-4. **Volume button PTT** as fallback option
-5. **Wearable integration**: Apple Watch, WearOS for alternative input
+# iOS
+# Xcode console; filter for "PTT"
+```
 
 ## References
 
-### Android Documentation
-- [MediaSession](https://developer.android.com/reference/android/media/session/MediaSession)
-- [Handling Media Buttons](https://developer.android.com/guide/topics/media-apps/mediabuttons)
-- [dispatchKeyEvent](https://developer.android.com/reference/android/app/Activity#dispatchKeyEvent(android.view.KeyEvent))
-
-### iOS Documentation
-- [MPRemoteCommandCenter](https://developer.apple.com/documentation/mediaplayer/mpremotecommandcenter)
-- [AVAudioSession](https://developer.apple.com/documentation/avfoundation/avaudiosession)
-- [Becoming a Now Playable App](https://developer.apple.com/documentation/mediaplayer/becoming_a_now_playable_app)
-
-## Support
-
-For issues or questions:
-1. Check device logs (see Testing section)
-2. Verify Bluetooth headset compatibility
-3. Test on different Android versions (10+)
-4. Test on different iOS versions (14+)
+- [Android MediaSession](https://developer.android.com/reference/android/media/session/MediaSession)
+- [Media3 MediaSessionService](https://developer.android.com/media/media3/session/background-playback)
+- [androidx/media#159 — first BT pause press mishandled](https://github.com/androidx/media/issues/159)
+- [Apple PushToTalk framework](https://developer.apple.com/documentation/PushToTalk)
+- [Creating a Push to Talk app](https://developer.apple.com/documentation/pushtotalk/creating-a-push-to-talk-app)
+- [WWDC22: Enhance voice communication with Push to Talk](https://developer.apple.com/videos/play/wwdc2022/10117/)
+- [Android VolumeProvider](https://developer.android.com/reference/android/media/VolumeProvider)
+- [AOSP AvrcpVolumeManager](https://android.googlesource.com/platform/packages/apps/Bluetooth/+/master/src/com/android/bluetooth/avrcp/AvrcpVolumeManager.java)
 
 ---
 
-**Last Updated**: 2025-10-06
-**Platforms**: Android 10+, iOS 14+
-**Status**: Beta - Ready for device testing
+**Last Updated**: 2026-07-23
+**Platforms**: Android 12+, iOS 16+ (for `systemPTT`; iOS 14+ for `MPRemoteCommandCenter` fallback)
+**Status**: Headset button capture solved and in use; volume-button PTT and WebRTC wiring open (see `ROADMAP.md`)

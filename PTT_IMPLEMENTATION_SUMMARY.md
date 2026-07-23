@@ -27,17 +27,22 @@ A complete, configurable push-to-talk (PTT) button system has been implemented w
 - **`home_screen.dart`** - Main PTT interface with on-screen button
 - **`settings_screen.dart`** - Configuration UI
 
-### Android Layer (`MainActivity.kt`)
-- **`dispatchKeyEvent()`** - Intercepts button presses before system handlers
-- **Long-press detection** - Prevents Google Assistant activation
-- **Button routing** - Dynamic handling based on configuration
+### Android Layer
+- **`PttMediaSessionService.kt`** - Foreground Media3 `MediaSessionService`; owns the media
+  session so headset play/pause/headsethook events keep arriving backgrounded/screen-off
+- **`PttEventBus.kt` / `PttPlayer.kt`** - Event bridge and minimal `Player` stub for the session
+- **`MainActivity.kt`** - Starts the service, handles volume-button `onKeyDown`/`onKeyUp`
+  (activity-scoped, not delivered via MediaSession), routes events to Flutter
 - **Wake lock** - FLAG_KEEP_SCREEN_ON support
 
-### iOS Layer (`AppDelegate.swift`)
-- **`MPRemoteCommandCenter`** - Headset button handling
-- **`VolumeButtonObserver`** - KVO-based volume button capture
-- **Wake lock** - UIApplication.isIdleTimerDisabled
-- **Platform tips** - Siri limitation warnings
+### iOS Layer
+- **`PTTSystemManager.swift`** - Apple **PushToTalk framework** (iOS 16+) integration —
+  recommended path (`systemPTT` button); gives background transmit + accessory button events
+  via `setAccessoryButtonEventsEnabled(true)`
+- **`AppDelegate.swift`** - `MPRemoteCommandCenter` (headset next/prev/play-pause options,
+  foreground only) + `VolumeButtonObserver` (KVO-based volume button capture) + wake lock
+  (`isIdleTimerDisabled`)
+- **Platform tips** - Siri long-press limitation documented (MPRemoteCommandCenter path only)
 
 ---
 
@@ -59,18 +64,24 @@ A complete, configurable push-to-talk (PTT) button system has been implemented w
 ## 📱 Platform-Specific Behavior
 
 ### Android
-- **Volume buttons:** Fully functional, Google Assistant prevented on long-press
-- **Headset buttons:** Full support via MediaSession + dispatchKeyEvent
+- **Volume buttons:** Fully functional (activity-scoped), Google Assistant prevented on long-press
+- **Headset buttons:** Full support via `PttMediaSessionService` (Media3 foreground service)
 - **Camera button:** Works on devices with dedicated camera button
 - **Wake lock:** FLAG_KEEP_SCREEN_ON via WindowManager
-- **Background:** Foreground only (Accessibility Service for background - future)
+- **Background:** ✅ Solved — foreground `MediaSessionService` keeps receiving headset
+  events with the app backgrounded or the screen off (no Accessibility Service needed)
 
 ### iOS
 - **Volume buttons:** Functional via KVO, volume resets automatically
-- **Headset buttons:** Full support via MPRemoteCommandCenter
-- **Siri limitation:** Long-press CANNOT be prevented (documented)
+- **Headset buttons:** Two paths — `MPRemoteCommandCenter` (foreground only, all iOS
+  versions) or **`systemPTT`** via Apple's PushToTalk framework (iOS 16+, recommended:
+  works backgrounded, proper accessory button routing)
+- **Siri limitation:** Long-press on the `MPRemoteCommandCenter` path CANNOT be prevented
+  (system restriction); the `systemPTT` path sidesteps this since it isn't a media-key
+  long-press in the first place
 - **Wake lock:** isIdleTimerDisabled via UIApplication
-- **Recommended:** Toggle mode + quick taps, avoid long-press
+- **Recommended:** `systemPTT` for headset button PTT going forward; toggle mode + quick
+  taps only when falling back to `MPRemoteCommandCenter` on iOS < 16
 
 ---
 
@@ -202,31 +213,44 @@ adb logcat | grep PTT
 - [x] Visual feedback and instructions
 
 ### Known Limitations (Documented) ⚠️
-- ⚠️ iOS cannot prevent Siri on long-press (system restriction)
-- ⚠️ Configuration doesn't persist across restarts (future enhancement)
-- ⚠️ Volume buttons in background require Accessibility Service (Android - future)
+- ⚠️ iOS `MPRemoteCommandCenter` path cannot prevent Siri on long-press (system
+  restriction; use `systemPTT` on iOS 16+ instead)
+- ⚠️ Configuration doesn't persist across restarts (see `ROADMAP.md` item 4)
+- ⚠️ Headset volume buttons aren't captured — AVRCP absolute volume bypasses `KeyEvent`
+  delivery entirely (see `ROADMAP.md` item 1, `VolumeProvider` plan)
 - ⚠️ Brief volume change on iOS before reset (imperceptible)
 
 ---
 
 ## 🔮 Future Enhancements
 
-### Priority 1 (Next Sprint)
+See `ROADMAP.md` for the actively tracked list with owners/acceptance criteria. Summary:
+
+### Done since this doc was first written ✅
+- [x] **iOS 16+ PushToTalk Framework** - native `systemPTT` integration (`PTTSystemManager.swift`)
+- [x] **Background headset button capture (Android)** - `PttMediaSessionService` foreground
+  `MediaSessionService`, no Accessibility Service required
+- [x] **WebRTC signaling/service layer** - `signaling_client.dart`, `webrtc_service.dart`, call screen
+
+### Priority 1 (Next Up)
+- [ ] **Headset volume-button PTT** - `VolumeProvider` on the Android media session (toggle
+  mode only; AVRCP absolute volume never delivers hold semantics) — `ROADMAP.md` item 1
+- [ ] **Wire PTT state to WebRTC audio** - replace the local-record POC path with track
+  mute/unmute against the existing WebRTC peer connection — `ROADMAP.md` item 2
 - [ ] **Configuration Persistence** - SharedPreferences (Android) / UserDefaults (iOS)
-- [ ] **Actual Audio Recording** - Implement microphone capture
-- [ ] **First-Run Tutorial** - Onboarding flow for new users
 
 ### Priority 2 (Future)
-- [ ] **Accessibility Service (Android)** - Background volume button support
-- [ ] **iOS 16+ PushToTalk Framework** - Native iOS PTT API integration
+- [ ] **Default iOS headset button to `systemPTT`** - keep `MPRemoteCommandCenter` only as
+  an iOS <16 fallback
 - [ ] **Haptic Feedback** - Vibration on button press
 - [ ] **Custom Button Mapping** - User-defined button assignments
+- [ ] **Dedicated BLE PTT button support** - true press/release over BLE GATT, bypassing
+  AVRCP entirely (Zello/ESChat hardware ecosystem)
 
 ### Priority 3 (Nice-to-Have)
 - [ ] **Analytics** - Track button usage patterns
 - [ ] **A/B Testing** - Optimal default configurations
-- [ ] **Audio Playback** - Play received PTT messages
-- [ ] **WebRTC Integration** - Multi-rider communication
+- [ ] **First-Run Tutorial** - Onboarding flow for new users
 
 ---
 
