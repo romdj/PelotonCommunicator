@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'signaling_client.dart';
+import 'voice_transport.dart';
 
 /// Connection state for a peer connection
 enum PeerConnectionState {
@@ -50,7 +51,7 @@ class PeerConnection {
 }
 
 /// WebRTC service for managing peer connections and audio streams
-class WebRTCService extends ChangeNotifier {
+class WebRTCService extends ChangeNotifier implements VoiceTransport {
   final SignalingClient _signaling;
   final WebRTCConfig _config;
 
