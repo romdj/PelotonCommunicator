@@ -4,15 +4,24 @@ import '../../models/ptt_state.dart';
 import '../../services/ptt_service.dart';
 import '../../services/signaling_client.dart';
 import '../../services/webrtc_service.dart';
+import '../../services/voice_transport.dart';
+import '../../services/signaling_channel.dart';
+import '../../services/ride_session.dart';
 
 class CallScreen extends StatefulWidget {
   final String serverUrl;
   final String roomId;
 
+  /// Injected for tests; production builds create real services internally.
+  final VoiceTransport? transport;
+  final SignalingChannel? signaling;
+
   const CallScreen({
     super.key,
     required this.serverUrl,
     this.roomId = 'default',
+    this.transport,
+    this.signaling,
   });
 
   @override
@@ -20,8 +29,9 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  late SignalingClient _signaling;
-  late WebRTCService _webrtc;
+  late final SignalingChannel _signaling;
+  late final VoiceTransport _transport;
+  RideSession? _session;
   bool _isInitialized = false;
   String? _errorMessage;
 
@@ -33,38 +43,40 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _initializeServices() async {
     try {
-      // Create signaling client
-      _signaling = SignalingClient(
-        serverUrl: widget.serverUrl,
-        userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
-        deviceInfo: Theme.of(context).platform.name,
-      );
+      if (widget.transport != null && widget.signaling != null) {
+        _signaling = widget.signaling!;
+        _transport = widget.transport!;
+      } else {
+        final client = SignalingClient(
+          serverUrl: widget.serverUrl,
+          userId: 'user_${DateTime.now().millisecondsSinceEpoch}',
+          deviceInfo: Theme.of(context).platform.name,
+        );
+        _signaling = client;
+        _transport = WebRTCService(signaling: client);
+      }
 
-      // Create WebRTC service
-      _webrtc = WebRTCService(signaling: _signaling);
-
-      // Set up callbacks
-      _webrtc.onRemoteStream = (peerId, stream) {
-        debugPrint('Remote stream from $peerId');
-        setState(() {});
-      };
-
-      _webrtc.onPeerDisconnected = (peerId) {
-        debugPrint('Peer disconnected: $peerId');
-        setState(() {});
-      };
-
-      // Connect to signaling server
-      await _signaling.connect();
-
-      // Initialize local audio
-      await _webrtc.initializeLocalStream();
-
-      // Join room
-      _signaling.joinRoom(widget.roomId);
-
-      // Listen for signaling state changes
+      // Rebuild the peer list as signaling/peer-connection state changes.
       _signaling.addListener(_onSignalingUpdate);
+      final transport = _transport;
+      if (transport is WebRTCService) {
+        transport.addListener(_onSignalingUpdate);
+        transport.onRemoteStream = (peerId, stream) {
+          if (mounted) setState(() {});
+        };
+        transport.onPeerDisconnected = (peerId) {
+          if (mounted) setState(() {});
+        };
+      }
+
+      // RideSession owns connect/join, the muted-by-default invariant, and
+      // gating the mic on PTT state.
+      _session = RideSession(
+        ptt: context.read<PTTService>(),
+        transport: _transport,
+        signaling: _signaling,
+      );
+      await _session!.join(widget.roomId);
 
       setState(() {
         _isInitialized = true;
@@ -85,8 +97,11 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void dispose() {
     _signaling.removeListener(_onSignalingUpdate);
-    _webrtc.dispose();
-    _signaling.dispose();
+    final transport = _transport;
+    if (transport is WebRTCService) {
+      transport.removeListener(_onSignalingUpdate);
+    }
+    _session?.leave();
     super.dispose();
   }
 
@@ -201,7 +216,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _buildPeersList() {
-    final peers = _signaling.peers;
+    final signaling = _signaling;
+    final peers =
+        signaling is SignalingClient ? signaling.peers : const <Peer>[];
 
     if (peers.isEmpty) {
       return Center(
@@ -239,8 +256,13 @@ class _CallScreenState extends State<CallScreen> {
       itemCount: peers.length,
       itemBuilder: (context, index) {
         final peer = peers[index];
-        final isTalking = _signaling.isPeerTalking(peer.id);
-        final connectionState = _webrtc.getPeerState(peer.id);
+        final isTalking = signaling is SignalingClient
+            ? signaling.isPeerTalking(peer.id)
+            : false;
+        final transport = _transport;
+        final connectionState = transport is WebRTCService
+            ? transport.getPeerState(peer.id)
+            : null;
 
         return Card(
           color: Colors.grey[850],
@@ -326,15 +348,6 @@ class _CallScreenState extends State<CallScreen> {
       builder: (context, pttService, child) {
         final isActive = pttService.state.isActive;
 
-        // Sync PTT state with signaling
-        if (isActive) {
-          _signaling.startPTT();
-          _webrtc.setMuted(false);
-        } else {
-          _signaling.endPTT();
-          _webrtc.setMuted(true);
-        }
-
         return Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -416,10 +429,17 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
+  SignalingConnectionState get _connectionState {
+    final signaling = _signaling;
+    return signaling is SignalingClient
+        ? signaling.connectionState
+        : SignalingConnectionState.connected;
+  }
+
   Color _getConnectionColor() {
     if (!_isInitialized) return Colors.grey;
 
-    switch (_signaling.connectionState) {
+    switch (_connectionState) {
       case SignalingConnectionState.connected:
         return Colors.green;
       case SignalingConnectionState.connecting:
@@ -434,7 +454,7 @@ class _CallScreenState extends State<CallScreen> {
   String _getConnectionText() {
     if (!_isInitialized) return 'Initializing';
 
-    switch (_signaling.connectionState) {
+    switch (_connectionState) {
       case SignalingConnectionState.connected:
         return 'Connected';
       case SignalingConnectionState.connecting:

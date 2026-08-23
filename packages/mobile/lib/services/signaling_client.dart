@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'signaling_channel.dart';
 
 /// Connection state for the signaling client
 enum SignalingConnectionState {
@@ -80,7 +81,7 @@ class RTCIceCandidateData {
 }
 
 /// Signaling client for WebRTC peer coordination
-class SignalingClient extends ChangeNotifier {
+class SignalingClient extends ChangeNotifier implements SignalingChannel {
   WebSocketChannel? _channel;
   final String _serverUrl;
   final String _userId;
@@ -113,6 +114,8 @@ class SignalingClient extends ChangeNotifier {
   String? get currentRoomId => _currentRoomId;
   String get userId => _userId;
   List<Peer> get peers => List.unmodifiable(_peers);
+  @override
+  int get peerCount => _peers.length;
   bool isPeerTalking(String peerId) => _talkingPeers[peerId] ?? false;
 
   /// Connect to the signaling server
