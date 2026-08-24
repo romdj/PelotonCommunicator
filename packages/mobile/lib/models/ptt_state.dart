@@ -12,7 +12,8 @@ enum PTTButton {
   // On-screen
   onScreen,
 
-  // Volume buttons (device + Bluetooth headset - note: BT volume buttons don't work)
+  // Volume buttons. Device buttons support both modes; Bluetooth headset volume
+  // buttons arrive as discrete AVRCP steps, so they are toggle-only.
   volume,
 
   // Play/Pause button (Bluetooth headset + wired headset)
@@ -85,7 +86,7 @@ extension PTTButtonExtension on PTTButton {
       case PTTButton.onScreen:
         return 'Large on-screen button (works everywhere)';
       case PTTButton.volume:
-        return 'Device volume buttons - works with device & most wired headsets (BT headset volume buttons unsupported)';
+        return 'Volume buttons on the device, wired headsets, and Bluetooth headsets (Bluetooth volume buttons toggle only)';
       case PTTButton.playPause:
         return 'Play/pause button on Bluetooth or wired headsets';
       case PTTButton.systemPTT:

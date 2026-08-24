@@ -43,6 +43,10 @@ class MainActivity: FlutterActivity() {
                         pttButton = args["button"] as? String ?: pttButton
                         preventScreenLock = args["preventScreenLock"] as? Boolean ?: preventScreenLock
 
+                        // Share with the media session so PttPlayer can claim (or release)
+                        // remote volume control for headset volume-button PTT.
+                        PttConfig.update(pttMode, pttButton)
+
                         Log.d("PTT", "Configuration updated: mode=$pttMode, button=$pttButton, preventScreenLock=$preventScreenLock")
 
                         if (preventScreenLock) {
@@ -60,6 +64,9 @@ class MainActivity: FlutterActivity() {
         }
 
         PttEventBus.listener = { keyEvent -> handleKeyEventForPTT(keyEvent) }
+        // Headset volume buttons arrive as discrete steps with no hold duration, so they
+        // always toggle regardless of the configured mode.
+        PttEventBus.discreteListener = { toggleRecording() }
 
         checkPermissionsAndStartService()
         Log.d("PTT", "Flutter engine configured")
@@ -151,15 +158,7 @@ class MainActivity: FlutterActivity() {
         when (effectiveMode) {
             "toggle" -> {
                 if (keyEvent.action == KeyEvent.ACTION_DOWN && keyEvent.repeatCount == 0) {
-                    if (currentTime - lastPressTime < DOUBLE_PRESS_INTERVAL) {
-                        Log.d("PTT", "Toggle debounced (Δ=${currentTime - lastPressTime}ms)")
-                        return
-                    }
-                    lastPressTime = currentTime
-                    isRecording = !isRecording
-                    val method = if (isRecording) "pttPressed" else "pttReleased"
-                    Log.d("PTT", "Toggle → $method")
-                    runOnUiThread { channel.invokeMethod(method, null) }
+                    toggleRecording()
                 }
             }
             "hold" -> {
@@ -188,8 +187,27 @@ class MainActivity: FlutterActivity() {
         }
     }
 
+    /**
+     * Single debounced state flip. Shared by key-event toggle mode and by discrete
+     * sources (headset volume buttons) that never report a press/release pair, so every
+     * input path lands on the same transition and is indistinguishable downstream.
+     */
+    private fun toggleRecording() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastPressTime < DOUBLE_PRESS_INTERVAL) {
+            Log.d("PTT", "Toggle debounced (Δ=${currentTime - lastPressTime}ms)")
+            return
+        }
+        lastPressTime = currentTime
+        isRecording = !isRecording
+        val method = if (isRecording) "pttPressed" else "pttReleased"
+        Log.d("PTT", "Toggle → $method")
+        runOnUiThread { channel.invokeMethod(method, null) }
+    }
+
     override fun onDestroy() {
         PttEventBus.listener = null
+        PttEventBus.discreteListener = null
         super.onDestroy()
     }
 }
