@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds the application configuration
@@ -58,11 +59,22 @@ func getEnvBool(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-// getEnvList returns an environment variable as a comma-separated list
+// getEnvList returns an environment variable as a comma-separated list, trimming
+// whitespace and dropping empty entries
 func getEnvList(key string, defaultValue []string) []string {
-	if value := os.Getenv(key); value != "" {
-		// Simple split by comma - could be enhanced with proper parsing
-		return []string{value}
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	return defaultValue
+
+	items := make([]string, 0)
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			items = append(items, item)
+		}
+	}
+	if len(items) == 0 {
+		return defaultValue
+	}
+	return items
 }
