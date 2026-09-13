@@ -10,13 +10,13 @@ type MessageType string
 
 const (
 	// Client -> Server messages
-	MsgJoinRoom   MessageType = "join_room"
-	MsgLeaveRoom  MessageType = "leave_room"
-	MsgOffer      MessageType = "offer"
-	MsgAnswer     MessageType = "answer"
-	MsgCandidate  MessageType = "candidate"
-	MsgPTTStart   MessageType = "ptt_start"
-	MsgPTTEnd     MessageType = "ptt_end"
+	MsgJoinRoom  MessageType = "join_room"
+	MsgLeaveRoom MessageType = "leave_room"
+	MsgOffer     MessageType = "offer"
+	MsgAnswer    MessageType = "answer"
+	MsgCandidate MessageType = "candidate"
+	MsgPTTStart  MessageType = "ptt_start"
+	MsgPTTEnd    MessageType = "ptt_end"
 
 	// Server -> Client messages
 	MsgPeers       MessageType = "peers"
@@ -72,18 +72,18 @@ type PeerLeftData struct {
 
 // OfferData contains WebRTC SDP offer
 type OfferData struct {
-	From        string            `json:"from"`
-	To          string            `json:"to"`
-	SessionID   string            `json:"sessionId"`
-	Description SDPDescription    `json:"description"`
+	From        string         `json:"from"`
+	To          string         `json:"to"`
+	SessionID   string         `json:"sessionId"`
+	Description SDPDescription `json:"description"`
 }
 
 // AnswerData contains WebRTC SDP answer
 type AnswerData struct {
-	From        string            `json:"from"`
-	To          string            `json:"to"`
-	SessionID   string            `json:"sessionId"`
-	Description SDPDescription    `json:"description"`
+	From        string         `json:"from"`
+	To          string         `json:"to"`
+	SessionID   string         `json:"sessionId"`
+	Description SDPDescription `json:"description"`
 }
 
 // SDPDescription represents WebRTC SDP
@@ -119,9 +119,9 @@ type PTTEndData struct {
 
 // PeerTalkingData is broadcast to notify others that a peer is talking
 type PeerTalkingData struct {
-	RoomID   string `json:"roomId"`
-	PeerID   string `json:"peerId"`
-	IsTalking bool  `json:"isTalking"`
+	RoomID    string `json:"roomId"`
+	PeerID    string `json:"peerId"`
+	IsTalking bool   `json:"isTalking"`
 }
 
 // ErrorData is sent when an error occurs
