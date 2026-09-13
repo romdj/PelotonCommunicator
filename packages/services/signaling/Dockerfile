@@ -1,5 +1,7 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+# Keep in sync with GO_VERSION in .github/workflows/ci.yml so the shipped binary is built
+# with the same (vulnerability-scanned) standard library that CI tests.
+FROM golang:1.27-alpine AS builder
 
 WORKDIR /app
 
