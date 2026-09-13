@@ -13,7 +13,7 @@ A **walkie-talkie style communication app** for people riding (Peloton) bikes to
 
 ### Known Bluetooth protocol constraints (not bugs — do not try to "fix" in-app)
 1. **Hold-to-talk on BT play/pause is unreliable.** Most headset firmware buffers the button to disambiguate single/double/long presses, so the AVRCP command arrives as a press+release pair at physical release; Android may also suppress `ACTION_UP` for BT devices. The app therefore **forces toggle mode for the play/pause button** — keep that behavior.
-2. **Headset volume buttons don't generate KeyEvents.** With AVRCP absolute volume, the headset sends `SET_ABSOLUTE_VOLUME` straight to the audio system. Workaround (planned): a `VolumeProvider` on the media session to receive discrete up/down callbacks — toggle mode only, never hold.
+2. **Headset volume buttons don't generate KeyEvents.** With AVRCP absolute volume, the headset sends `SET_ABSOLUTE_VOLUME` straight to the audio system. Implemented workaround: `PttPlayer` claims remote device volume (Media3's `VolumeProvider` equivalent) while the volume button is selected, and routes steps through `PttEventBus.emitDiscrete()` — toggle mode only, never hold.
 3. True press-and-hold with reliable down/up is achievable with **dedicated BLE PTT buttons** (handlebar-mountable; the Zello/ESChat ecosystem) — a candidate premium path.
 
 ## Repository Structure (monorepo)
@@ -40,8 +40,16 @@ A **walkie-talkie style communication app** for people riding (Peloton) bikes to
 
 ### Testing
 - Flutter: `flutter test` in `packages/mobile`
-- Go: `go test ./...` in `packages/server` / `packages/services/signaling`
+- Signaling (Go): `go test -race ./...` (unit) and `go test -race -tags=integration ./cmd/...` (real WebSocket flows) in `packages/services/signaling`
+- `packages/server` is legacy (placeholder only) and is not in CI
 - Follow TDD practices where applicable
+
+### CI and local gates
+- Single pipeline: `.github/workflows/ci.yml` (quality → build & unit → integration → security → `CI Status`). Details and local repro commands: `docs/ci-pipeline.md`
+- `CI Status` is the required check on `main`; add new jobs to its `needs:` list to make them merge-blocking
+- Toolchain pins live in the workflow `env:` (Flutter 3.47.1, Go 1.27.x, Java 17); keep the signaling Dockerfile's Go version in sync
+- Local hooks via lefthook (`brew install lefthook && lefthook install`): format + analyze/vet on commit, tests on push. Never use `--no-verify`
+- Analyzer runs with `--fatal-infos`: infos (deprecations, missing `const`) fail the build
 - **Headset behavior requires physical devices** (emulators insufficient); expect per-headset AVRCP variance
 - Testing guides: `TESTING.md`, `PHASE*_TESTING.md`, `WIRELESS_DEBUG_SETUP.md`
 
