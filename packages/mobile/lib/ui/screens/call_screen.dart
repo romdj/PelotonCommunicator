@@ -260,9 +260,8 @@ class _CallScreenState extends State<CallScreen> {
             ? signaling.isPeerTalking(peer.id)
             : false;
         final transport = _transport;
-        final connectionState = transport is WebRTCService
-            ? transport.getPeerState(peer.id)
-            : null;
+        final connectionState =
+            transport is WebRTCService ? transport.getPeerState(peer.id) : null;
 
         return Card(
           color: Colors.grey[850],
@@ -332,7 +331,7 @@ class _CallScreenState extends State<CallScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color, width: 1),
       ),
@@ -382,7 +381,7 @@ class _CallScreenState extends State<CallScreen> {
                       boxShadow: [
                         BoxShadow(
                           color: (isActive ? Colors.green : Colors.deepOrange)
-                              .withOpacity(0.4),
+                              .withValues(alpha: 0.4),
                           blurRadius: isActive ? 30 : 15,
                           spreadRadius: isActive ? 5 : 2,
                         ),
@@ -414,7 +413,9 @@ class _CallScreenState extends State<CallScreen> {
                 // Mode indicator
                 Text(
                   pttService.button == PTTButton.onScreen
-                      ? (pttService.mode.isToggle ? 'Tap to toggle' : 'Hold to talk')
+                      ? (pttService.mode.isToggle
+                          ? 'Tap to toggle'
+                          : 'Hold to talk')
                       : 'Using ${pttService.button.displayName}',
                   style: TextStyle(
                     color: Colors.grey[600],

@@ -49,10 +49,11 @@ class HomeScreen extends StatelessWidget {
                               pttService.mode.isToggle
                           ? (_) => pttService.manualPress()
                           : null,
-                      onLongPressStart: pttService.button == PTTButton.onScreen &&
-                              pttService.mode.isHold
-                          ? (_) => pttService.manualPress()
-                          : null,
+                      onLongPressStart:
+                          pttService.button == PTTButton.onScreen &&
+                                  pttService.mode.isHold
+                              ? (_) => pttService.manualPress()
+                              : null,
                       onLongPressEnd: pttService.button == PTTButton.onScreen &&
                               pttService.mode.isHold
                           ? (_) => pttService.manualRelease()
@@ -70,8 +71,8 @@ class HomeScreen extends StatelessWidget {
                               ? [
                                   BoxShadow(
                                     color: pttService.state.isActive
-                                        ? Colors.green.withOpacity(0.5)
-                                        : Colors.red.withOpacity(0.5),
+                                        ? Colors.green.withValues(alpha: 0.5)
+                                        : Colors.red.withValues(alpha: 0.5),
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
@@ -212,10 +213,10 @@ class HomeScreen extends StatelessWidget {
                                     value ? PTTMode.hold : PTTMode.toggle,
                                   );
                                 },
-                                activeColor: Colors.orange,
+                                activeThumbColor: Colors.orange,
                                 inactiveThumbColor: Colors.green,
-                                inactiveTrackColor: Colors.green.withOpacity(
-                                  0.3,
+                                inactiveTrackColor: Colors.green.withValues(
+                                  alpha: 0.3,
                                 ),
                               ),
                             ],

@@ -176,7 +176,8 @@ void main() {
       service.dispose();
     });
 
-    test('setButton(playPause) does NOT change mode (regression: native handles toggle semantics)',
+    test(
+        'setButton(playPause) does NOT change mode (regression: native handles toggle semantics)',
         () async {
       final service = PTTService(recorder: _FakeRecorderService());
       await pumpEventQueue();
@@ -191,7 +192,8 @@ void main() {
 
       expect(service.button, PTTButton.playPause);
       expect(service.mode, PTTMode.hold,
-          reason: 'mode should be preserved; native code forces toggle for play/pause keycodes');
+          reason:
+              'mode should be preserved; native code forces toggle for play/pause keycodes');
 
       service.dispose();
     });

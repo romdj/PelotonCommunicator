@@ -84,6 +84,7 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Initialize the local audio stream
+  @override
   Future<void> initializeLocalStream() async {
     if (_localStream != null) return;
 
@@ -107,6 +108,7 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Dispose of the local audio stream
+  @override
   Future<void> disposeLocalStream() async {
     if (_localStream != null) {
       for (final track in _localStream!.getTracks()) {
@@ -130,6 +132,7 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Set mute state
+  @override
   void setMuted(bool muted) {
     if (_localStream != null && _isMuted != muted) {
       _isMuted = muted;
@@ -141,6 +144,7 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Connect to all peers in the room
+  @override
   Future<void> connectToAllPeers() async {
     for (final peer in _signaling.peers) {
       await _createOfferForPeer(peer.id);
@@ -178,7 +182,8 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Handle incoming offer
-  Future<void> _handleOffer(String peerId, RTCSessionDescriptionData description) async {
+  Future<void> _handleOffer(
+      String peerId, RTCSessionDescriptionData description) async {
     debugPrint('Received offer from: $peerId');
 
     final sessionId = generateSessionId(_signaling.userId, peerId);
@@ -223,7 +228,8 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Handle incoming answer
-  Future<void> _handleAnswer(String peerId, RTCSessionDescriptionData description) async {
+  Future<void> _handleAnswer(
+      String peerId, RTCSessionDescriptionData description) async {
     debugPrint('Received answer from: $peerId');
 
     final pc = _peerConnections[peerId];
@@ -244,7 +250,8 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Handle incoming ICE candidate
-  Future<void> _handleCandidate(String peerId, RTCIceCandidateData candidateData) async {
+  Future<void> _handleCandidate(
+      String peerId, RTCIceCandidateData candidateData) async {
     debugPrint('Received ICE candidate from: $peerId');
 
     final pc = _peerConnections[peerId];
@@ -260,9 +267,12 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
       return;
     }
 
-    if (pc.connection.signalingState == RTCSignalingState.RTCSignalingStateStable ||
-        pc.connection.signalingState == RTCSignalingState.RTCSignalingStateHaveLocalOffer ||
-        pc.connection.signalingState == RTCSignalingState.RTCSignalingStateHaveRemoteOffer) {
+    if (pc.connection.signalingState ==
+            RTCSignalingState.RTCSignalingStateStable ||
+        pc.connection.signalingState ==
+            RTCSignalingState.RTCSignalingStateHaveLocalOffer ||
+        pc.connection.signalingState ==
+            RTCSignalingState.RTCSignalingStateHaveRemoteOffer) {
       try {
         await pc.connection.addCandidate(candidate);
       } catch (e) {
@@ -288,7 +298,8 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Create a new peer connection
-  Future<PeerConnection> _createPeerConnection(String peerId, String sessionId) async {
+  Future<PeerConnection> _createPeerConnection(
+      String peerId, String sessionId) async {
     final connection = await createPeerConnection(_config.toConfiguration());
 
     final pc = PeerConnection(
@@ -365,6 +376,7 @@ class WebRTCService extends ChangeNotifier implements VoiceTransport {
   }
 
   /// Close all peer connections
+  @override
   Future<void> closeAllConnections() async {
     for (final peerId in _peerConnections.keys.toList()) {
       await _closePeerConnection(peerId);

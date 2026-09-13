@@ -87,7 +87,8 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   final String _userId;
   final String? _deviceInfo;
 
-  SignalingConnectionState _connectionState = SignalingConnectionState.disconnected;
+  SignalingConnectionState _connectionState =
+      SignalingConnectionState.disconnected;
   String? _currentRoomId;
   final List<Peer> _peers = [];
   final Map<String, bool> _talkingPeers = {};
@@ -119,6 +120,7 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   bool isPeerTalking(String peerId) => _talkingPeers[peerId] ?? false;
 
   /// Connect to the signaling server
+  @override
   Future<void> connect() async {
     if (_connectionState == SignalingConnectionState.connecting ||
         _connectionState == SignalingConnectionState.connected) {
@@ -128,7 +130,8 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
     _setConnectionState(SignalingConnectionState.connecting);
 
     try {
-      final uri = Uri.parse('$_serverUrl/ws?userId=$_userId&deviceInfo=${Uri.encodeComponent(_deviceInfo ?? '')}');
+      final uri = Uri.parse(
+          '$_serverUrl/ws?userId=$_userId&deviceInfo=${Uri.encodeComponent(_deviceInfo ?? '')}');
       debugPrint('Connecting to signaling server: $uri');
 
       _channel = WebSocketChannel.connect(uri);
@@ -160,6 +163,7 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Disconnect from the signaling server
+  @override
   Future<void> disconnect() async {
     if (_currentRoomId != null) {
       leaveRoom();
@@ -173,6 +177,7 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Join a signaling room
+  @override
   void joinRoom(String roomId) {
     _send('join_room', {
       'roomId': roomId,
@@ -184,6 +189,7 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Leave the current room
+  @override
   void leaveRoom() {
     if (_currentRoomId != null) {
       _send('leave_room', {'roomId': _currentRoomId});
@@ -195,7 +201,8 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Send a WebRTC offer to a peer
-  void sendOffer(String toPeerId, String sessionId, RTCSessionDescriptionData description) {
+  void sendOffer(String toPeerId, String sessionId,
+      RTCSessionDescriptionData description) {
     _send('offer', {
       'to': toPeerId,
       'sessionId': sessionId,
@@ -204,7 +211,8 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Send a WebRTC answer to a peer
-  void sendAnswer(String toPeerId, String sessionId, RTCSessionDescriptionData description) {
+  void sendAnswer(String toPeerId, String sessionId,
+      RTCSessionDescriptionData description) {
     _send('answer', {
       'to': toPeerId,
       'sessionId': sessionId,
@@ -213,7 +221,8 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Send an ICE candidate to a peer
-  void sendCandidate(String toPeerId, String sessionId, RTCIceCandidateData candidate) {
+  void sendCandidate(
+      String toPeerId, String sessionId, RTCIceCandidateData candidate) {
     _send('candidate', {
       'to': toPeerId,
       'sessionId': sessionId,
@@ -222,11 +231,13 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
   }
 
   /// Signal that PTT is starting (user is talking)
+  @override
   void startPTT() {
     _send('ptt_start', {'roomId': _currentRoomId});
   }
 
   /// Signal that PTT is ending (user stopped talking)
+  @override
   void endPTT() {
     _send('ptt_end', {'roomId': _currentRoomId});
   }
@@ -324,8 +335,8 @@ class SignalingClient extends ChangeNotifier implements SignalingChannel {
 
   void _handleCandidate(Map<String, dynamic> data) {
     final from = data['from'] as String;
-    final candidate = RTCIceCandidateData.fromJson(
-        data['candidate'] as Map<String, dynamic>);
+    final candidate =
+        RTCIceCandidateData.fromJson(data['candidate'] as Map<String, dynamic>);
     onCandidate?.call(from, candidate);
   }
 

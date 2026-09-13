@@ -33,7 +33,8 @@ class PTTService extends ChangeNotifier {
         'button': _config.button.name,
         'preventScreenLock': _config.preventScreenLock,
       });
-      debugPrint('PTT initial config pushed to native: mode=${_config.mode.name}, button=${_config.button.name}');
+      debugPrint(
+          'PTT initial config pushed to native: mode=${_config.mode.name}, button=${_config.button.name}');
     } catch (e) {
       debugPrint('Error pushing initial PTT config to native: $e');
     }
@@ -72,7 +73,8 @@ class PTTService extends ChangeNotifier {
   void _setState(PTTState newState) {
     if (_state != newState) {
       _state = newState;
-      debugPrint('PTT State changed to: $_state (Mode: ${_config.mode.displayName}, Button: ${_config.button.displayName})');
+      debugPrint(
+          'PTT State changed to: $_state (Mode: ${_config.mode.displayName}, Button: ${_config.button.displayName})');
       // Drive recording lifecycle from state transitions so every press/release
       // path (system PTT, headset, on-screen, manual) goes through one place.
       if (newState == PTTState.active) {
@@ -88,7 +90,6 @@ class PTTService extends ChangeNotifier {
     if (_config.mode != newConfig.mode ||
         _config.button != newConfig.button ||
         _config.preventScreenLock != newConfig.preventScreenLock) {
-
       // If switching modes/buttons while recording, stop recording
       if (_state == PTTState.active) {
         _setState(PTTState.idle);
@@ -96,7 +97,8 @@ class PTTService extends ChangeNotifier {
 
       final oldPreventScreenLock = _config.preventScreenLock;
       _config = newConfig;
-      debugPrint('PTT Configuration updated: Mode=${_config.mode.displayName}, Button=${_config.button.displayName}, PreventScreenLock=${_config.preventScreenLock}');
+      debugPrint(
+          'PTT Configuration updated: Mode=${_config.mode.displayName}, Button=${_config.button.displayName}, PreventScreenLock=${_config.preventScreenLock}');
 
       // Update WakeLock if the setting changed
       if (oldPreventScreenLock != _config.preventScreenLock) {

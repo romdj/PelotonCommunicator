@@ -85,17 +85,21 @@ class SettingsScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.deepOrange.withOpacity(0.2) : Colors.transparent,
+                color: isSelected
+                    ? Colors.deepOrange.withValues(alpha: 0.2)
+                    : Colors.transparent,
                 border: Border(
                   bottom: mode != PTTMode.values.last
-                      ? BorderSide(color: Colors.white10)
+                      ? const BorderSide(color: Colors.white10)
                       : BorderSide.none,
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
                     color: isDisabled
                         ? Colors.white24
                         : (isSelected ? Colors.deepOrange : Colors.white54),
@@ -112,7 +116,9 @@ class SettingsScreen extends StatelessWidget {
                                 ? Colors.white30
                                 : (isSelected ? Colors.white : Colors.white70),
                             fontSize: 16,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -163,17 +169,21 @@ class SettingsScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.deepOrange.withOpacity(0.2) : Colors.transparent,
+                color: isSelected
+                    ? Colors.deepOrange.withValues(alpha: 0.2)
+                    : Colors.transparent,
                 border: Border(
                   bottom: !isLast
-                      ? BorderSide(color: Colors.white10)
+                      ? const BorderSide(color: Colors.white10)
                       : BorderSide.none,
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
                     color: isSelected ? Colors.deepOrange : Colors.white54,
                   ),
                   const SizedBox(width: 12),
@@ -191,13 +201,15 @@ class SettingsScreen extends StatelessWidget {
                           style: TextStyle(
                             color: isSelected ? Colors.white : Colors.white70,
                             fontSize: 16,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           button.description,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white60,
                             fontSize: 12,
                           ),
@@ -230,11 +242,11 @@ class SettingsScreen extends StatelessWidget {
             size: 28,
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Prevent Screen Lock',
                   style: TextStyle(
                     color: Colors.white,
@@ -242,7 +254,7 @@ class SettingsScreen extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   'Keep screen on during rides',
                   style: TextStyle(
@@ -256,7 +268,7 @@ class SettingsScreen extends StatelessWidget {
           Switch(
             value: pttService.config.preventScreenLock,
             onChanged: (value) => pttService.setPreventScreenLock(value),
-            activeColor: Colors.deepOrange,
+            activeThumbColor: Colors.deepOrange,
           ),
         ],
       ),
@@ -266,9 +278,9 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildInfoCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.blue[900]?.withOpacity(0.3),
+        color: Colors.blue[900]?.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withOpacity(0.5)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.5)),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
