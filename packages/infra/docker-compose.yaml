@@ -1,0 +1,96 @@
+# Local development environment for Peloton Communicator MVP
+# This compose file runs the signaling service for WebRTC peer coordination
+
+version: '3.8'
+
+services:
+  # Signaling Service - WebSocket server for WebRTC peer coordination
+  signaling:
+    build:
+      context: ../services/signaling
+      dockerfile: Dockerfile
+    container_name: peloton-signaling
+    ports:
+      - "8080:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - LOG_LEVEL=debug
+      - LOG_JSON=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # TURN/STUN server for NAT traversal (optional - uses coturn)
+  # Uncomment when testing over cellular networks or when NAT is blocking direct P2P
+  # turn:
+  #   image: coturn/coturn:4.6
+  #   container_name: peloton-turn
+  #   network_mode: host
+  #   volumes:
+  #     - ./turnserver.conf:/etc/turnserver.conf:ro
+  #   restart: unless-stopped
+
+  # Redis for signaling session state (Phase 2)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: peloton-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+
+  # PostgreSQL for Auth/Groups services (Phase 2)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: peloton-postgres
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     - POSTGRES_USER=peloton
+  #     - POSTGRES_PASSWORD=peloton_dev
+  #     - POSTGRES_DB=peloton
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U peloton"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+
+  # Kafka for event streaming (Phase 2)
+  # kafka:
+  #   image: confluentinc/cp-kafka:7.5.0
+  #   container_name: peloton-kafka
+  #   ports:
+  #     - "9092:9092"
+  #   environment:
+  #     - KAFKA_NODE_ID=1
+  #     - KAFKA_PROCESS_ROLES=broker,controller
+  #     - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+  #     - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+  #     - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+  #     - KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+  #     - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+  #     - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+  #     - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+  #     - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+  #   volumes:
+  #     - kafka-data:/var/lib/kafka/data
+  #   restart: unless-stopped
+
+# volumes:
+#   redis-data:
+#   postgres-data:
+#   kafka-data:

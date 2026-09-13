@@ -161,3 +161,7 @@ docs/coverage/
 *.tmp
 *.temp
 .cache/
+
+# Signaling service build output
+packages/services/signaling/signaling
+packages/services/signaling/coverage.out

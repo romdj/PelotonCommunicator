@@ -1,0 +1,37 @@
+# Local quality gates, mirroring the fast CI stages so problems surface before a push.
+# Install once per clone:  brew install lefthook && lefthook install
+# See docs/ci-pipeline.md for how these map to the CI pipeline.
+
+pre-commit:
+  parallel: true
+  commands:
+    dart-format:
+      root: packages/mobile/
+      glob: "*.dart"
+      run: dart format --output=none --set-exit-if-changed {staged_files}
+    flutter-analyze:
+      root: packages/mobile/
+      glob: "*.dart"
+      run: flutter analyze --fatal-infos
+    gofmt:
+      root: packages/services/signaling/
+      glob: "*.go"
+      run: |
+        unformatted=$(gofmt -s -l {staged_files})
+        if [ -n "$unformatted" ]; then
+          echo "gofmt -s needed on:"; echo "$unformatted"; exit 1
+        fi
+    go-vet:
+      root: packages/services/signaling/
+      glob: "*.go"
+      run: go vet ./... && go vet -tags=integration ./...
+
+pre-push:
+  parallel: true
+  commands:
+    flutter-test:
+      root: packages/mobile/
+      run: flutter test
+    go-test:
+      root: packages/services/signaling/
+      run: go test -race ./... && go test -race -tags=integration ./cmd/...

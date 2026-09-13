@@ -1,0 +1,7 @@
+# Reviewed gitleaks findings that are not real secrets. One fingerprint per line.
+#
+# Upstream cloudwebrtc/flutter-webrtc-demo sample (committed 2022, now only under the
+# untracked archive/). The match is inside a code comment illustrating the JSON shape of a
+# TURN credential response (example username from 2020, TURN URI 127.0.0.1). Not a live
+# credential and not ours.
+fdbc53e1b6296b736e96b51f2a4e49b3cdf21000:flutter-webrtc-demo/lib/src/call_sample/signaling.dart:generic-api-key:266

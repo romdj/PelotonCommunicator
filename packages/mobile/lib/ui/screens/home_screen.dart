@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/ptt_state.dart';
 import '../../services/ptt_service.dart';
+import 'settings_screen.dart';
+import 'group_picker_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,7 +12,30 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.call, color: Colors.white),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GroupPickerScreen()),
+            ),
+            tooltip: 'Join Room',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -18,21 +43,64 @@ class HomeScreen extends StatelessWidget {
               builder: (context, pttService, child) {
                 return Column(
                   children: [
-                    // Main PTT Icon
-                    Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: pttService.state.isActive
-                            ? Colors.green
-                            : Colors.red,
-                        border: Border.all(color: Colors.white, width: 4),
-                      ),
-                      child: const Icon(
-                        Icons.mic,
-                        size: 100,
-                        color: Colors.white,
+                    // Main PTT Button (On-Screen PTT)
+                    GestureDetector(
+                      onTapDown: pttService.button == PTTButton.onScreen &&
+                              pttService.mode.isToggle
+                          ? (_) => pttService.manualPress()
+                          : null,
+                      onLongPressStart:
+                          pttService.button == PTTButton.onScreen &&
+                                  pttService.mode.isHold
+                              ? (_) => pttService.manualPress()
+                              : null,
+                      onLongPressEnd: pttService.button == PTTButton.onScreen &&
+                              pttService.mode.isHold
+                          ? (_) => pttService.manualRelease()
+                          : null,
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: pttService.state.isActive
+                              ? Colors.green
+                              : Colors.red,
+                          border: Border.all(color: Colors.white, width: 4),
+                          boxShadow: pttService.button == PTTButton.onScreen
+                              ? [
+                                  BoxShadow(
+                                    color: pttService.state.isActive
+                                        ? Colors.green.withValues(alpha: 0.5)
+                                        : Colors.red.withValues(alpha: 0.5),
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.mic,
+                              size: 100,
+                              color: Colors.white,
+                            ),
+                            if (pttService.button == PTTButton.onScreen)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  pttService.mode.isToggle ? 'TAP' : 'HOLD',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
 
@@ -49,6 +117,38 @@ class HomeScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 20),
+
+                    // Current button configuration
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white10,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            pttService.button.icon,
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            pttService.button.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
 
                     Text(
                       _getInstructionText(pttService),
@@ -113,10 +213,10 @@ class HomeScreen extends StatelessWidget {
                                     value ? PTTMode.hold : PTTMode.toggle,
                                   );
                                 },
-                                activeColor: Colors.orange,
+                                activeThumbColor: Colors.orange,
                                 inactiveThumbColor: Colors.green,
-                                inactiveTrackColor: Colors.green.withOpacity(
-                                  0.3,
+                                inactiveTrackColor: Colors.green.withValues(
+                                  alpha: 0.3,
                                 ),
                               ),
                             ],
@@ -160,14 +260,24 @@ class HomeScreen extends StatelessWidget {
   }
 
   String _getInstructionText(PTTService pttService) {
+    final buttonName = pttService.button == PTTButton.onScreen
+        ? 'on-screen button'
+        : pttService.button.displayName.toLowerCase();
+
     if (pttService.state.isActive) {
       return pttService.mode.isToggle
-          ? 'Press button again to stop recording'
-          : 'Release button to stop recording';
+          ? 'Press $buttonName again to stop recording'
+          : 'Release $buttonName to stop recording';
     } else {
-      return pttService.mode.isToggle
-          ? 'Press play/pause button to start recording'
-          : 'Hold play/pause button to record';
+      if (pttService.button == PTTButton.onScreen) {
+        return pttService.mode.isToggle
+            ? 'Tap the button to start recording'
+            : 'Press and hold the button to record';
+      } else {
+        return pttService.mode.isToggle
+            ? 'Press $buttonName to start recording'
+            : 'Hold $buttonName to record';
+      }
     }
   }
 }
